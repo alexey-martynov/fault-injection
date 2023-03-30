@@ -19,6 +19,26 @@ static bool isInjected(const std::exception & e)
 	return std::strcmp(e.what(), "INJECTED") == 0;
 }
 
+BOOST_AUTO_TEST_SUITE(iterators)
+
+BOOST_AUTO_TEST_CASE(foreach)
+{
+	using avm::fault_injection::points;
+
+	BOOST_CHECK_EQUAL(std::distance(points.begin(), points.end()), 3u);
+
+	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "simple") == 0);
+	}) != points.end());
+	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "second") == 0);
+	}) != points.end());
+	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(point.space, "test2") == 0) && (strcmp(point.name, "another") == 0);
+	}) != points.end());
+}
+BOOST_AUTO_TEST_SUITE_END()
+
 BOOST_AUTO_TEST_SUITE(error_code)
 
 BOOST_AUTO_TEST_CASE(no_error)
@@ -176,24 +196,4 @@ BOOST_AUTO_TEST_CASE(error)
 	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(test, simple), false);
 }
 
-BOOST_AUTO_TEST_SUITE_END()
-
-BOOST_AUTO_TEST_SUITE(iterators)
-
-BOOST_AUTO_TEST_CASE(foreach)
-{
-	using avm::fault_injection::points;
-
-	BOOST_CHECK_EQUAL(std::distance(points.begin(), points.end()), 3u);
-
-	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
-		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "simple") == 0);
-	}) != points.end());
-	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
-		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "second") == 0);
-	}) != points.end());
-	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
-		return (strcmp(point.space, "test2") == 0) && (strcmp(point.name, "another") == 0);
-	}) != points.end());
-}
 BOOST_AUTO_TEST_SUITE_END()

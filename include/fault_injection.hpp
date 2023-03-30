@@ -16,10 +16,21 @@ namespace avm::fault_injection
 
 #define FAULT_INJECTION_POINT_REF(space, name) ::space::fault_injection_point_##name
 
-#define FAULT_INJECTION_POINT(space, name) \
+#if defined(__APPLE__)
+#define FAULT_INJECTION_POINT(space, name)	  \
 	namespace space { \
-		static ::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used,section("__DATA,__faults"))) = { #space, #name, 0, false }; \
+		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { #space, #name, 0, false }; \
+		static ::avm::fault_injection::point_t * fault_injection_point_##name##_ptr __attribute__((used,section("__DATA,__faults"))) = &FAULT_INJECTION_POINT_REF(space, name); \
 	}
+#elif defined(__linux__)
+#define FAULT_INJECTION_POINT(space, name)                              \
+	namespace space { \
+		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { #space, #name, 0, false }; \
+		static ::avm::fault_injection::point_t * fault_injection_point_##name##_ptr __attribute__((used,section("__faults"))) = &FAULT_INJECTION_POINT_REF(space, name); \
+	}
+#else
+#error "Unsupported platform"
+#endif
 
 #define FAULT_INJECT_ERROR_CODE(space, name, action) (FAULT_INJECTION_POINT_REF(space, name).active ? FAULT_INJECTION_POINT_REF(space, name).error_code : (action))
 #define FAULT_INJECT_ERRNO_EX(space, name, action, result) (FAULT_INJECTION_POINT_REF(space, name).active ? ((errno = FAULT_INJECTION_POINT_REF(space, name).error_code), (result)) : (action))
@@ -61,7 +72,7 @@ namespace avm::fault_injection
 			using pointer           = point_t *;
 			using reference         = point_t &;
 
-			iterator(point_t * ptr):
+			iterator(point_t ** ptr):
 				ptr_(ptr)
 			{}
 
@@ -69,14 +80,14 @@ namespace avm::fault_injection
 			{
 				assert(ptr_ != nullptr);
 
-				return *ptr_;
+				return **ptr_;
 			}
 
 			pointer operator ->() const noexcept
 			{
 				assert(ptr_ != nullptr);
 
-				return ptr_;
+				return *ptr_;
 			}
 
 			iterator& operator ++()
@@ -106,7 +117,7 @@ namespace avm::fault_injection
 			}
 
 		private:
-			point_t * ptr_;
+			point_t ** ptr_;
 		};
 
 		iterator begin();
