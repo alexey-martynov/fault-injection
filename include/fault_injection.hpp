@@ -17,20 +17,22 @@ namespace avm::fault_injection
 #define FAULT_INJECTION_POINT_REF(space, name) ::space::fault_injection_point_##name
 
 #if defined(__APPLE__)
-#define FAULT_INJECTION_POINT(space, name)	  \
+#define FAULT_INJECTION_POINT_EX(space, name, error_code)	  \
 	namespace space { \
-		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { #space, #name, 0, false }; \
+		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { #space, #name, error_code, false }; \
 		static ::avm::fault_injection::point_t * fault_injection_point_##name##_ptr __attribute__((used,section("__DATA,__faults"))) = &FAULT_INJECTION_POINT_REF(space, name); \
 	}
 #elif defined(__linux__)
-#define FAULT_INJECTION_POINT(space, name)                              \
+#define FAULT_INJECTION_POINT(space, name, error_code)	  \
 	namespace space { \
-		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { #space, #name, 0, false }; \
+		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { #space, #name, error_code, false }; \
 		static ::avm::fault_injection::point_t * fault_injection_point_##name##_ptr __attribute__((used,section("__faults"))) = &FAULT_INJECTION_POINT_REF(space, name); \
 	}
 #else
 #error "Unsupported platform"
 #endif
+
+#define FAULT_INJECTION_POINT(space, name)	FAULT_INJECTION_POINT_EX(space, name, 0)
 
 #define FAULT_INJECT_ERROR_CODE(space, name, action) (FAULT_INJECTION_POINT_REF(space, name).active ? FAULT_INJECTION_POINT_REF(space, name).error_code : (action))
 #define FAULT_INJECT_ERRNO_EX(space, name, action, result) (FAULT_INJECTION_POINT_REF(space, name).active ? ((errno = FAULT_INJECTION_POINT_REF(space, name).error_code), (result)) : (action))
