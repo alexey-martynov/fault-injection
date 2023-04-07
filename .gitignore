@@ -1,4 +1,7 @@
 *.a
 *.o
 *.d
+*.so
+*.dylib
 test/test
+test/test-shared

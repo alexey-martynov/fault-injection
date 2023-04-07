@@ -26,10 +26,6 @@ This library provides simple fault injection support. It's benefits:
 * The custom build scripts and translation units with many includes
   are not required.
   
-Not implemented yet but expected:
-
-* Multiple shared objects support.
-
 Platforms
 ---------
 
@@ -94,6 +90,12 @@ statement.
 
 Tests are written with Boost.Test and it is expected that it is
 available on standard include and library paths.
+
+The dynamic library support works via registering module's points
+during process of loading. This performed via "constructor"
+function. All modules chained to a list allowing search by space and
+name. This "constructor" function is linked automatically when library
+is used.
 
 API
 ---
@@ -190,3 +192,8 @@ of defined points.
 : lookup injection point by `space` and `name`, return pointer to
   point definition or `nullptr` in case when it is not found.
 
+### Listing
+
+All available injection points can be iterated via range-like
+object `points`. It offers range of all registered injection points in
+all loaded modules.
