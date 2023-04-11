@@ -44,11 +44,21 @@ namespace avm::fault_injection
 
 #define FAULT_INJECTION_POINT(space, name)	FAULT_INJECTION_POINT_EX(space, name, 0)
 
+#if FAULT_INJECTIONS_ENABLED > 0
+
 #define FAULT_INJECT_ERROR_CODE(space, name, action) (::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name)) ? FAULT_INJECTION_POINT_REF(space, name).error_code : (action))
 #define FAULT_INJECT_ERRNO_EX(space, name, action, result) (::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name)) ? ((errno = FAULT_INJECTION_POINT_REF(space, name).error_code), (result)) : (action))
 #define FAULT_INJECT_ERRNO(space, name, action) FAULT_INJECT_ERRNO_EX(space, name, action, -1)
 #define FAULT_INJECT_EXCEPTION(space, name, exception) do { if (::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name))) { throw (exception); } } while (false)
 
+#else
+
+#define FAULT_INJECT_ERROR_CODE(space, name, action) (action)
+#define FAULT_INJECT_ERRNO_EX(space, name, action, result) (action)
+#define FAULT_INJECT_ERRNO(space, name, action) FAULT_INJECT_ERRNO_EX(space, name, action, -1)
+#define FAULT_INJECT_EXCEPTION(space, name, exception)
+
+#endif
 	__attribute__((visibility("hidden")))
 	void registerModule();
 

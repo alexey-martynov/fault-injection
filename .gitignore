@@ -5,3 +5,4 @@
 *.dylib
 test/test
 test/test-shared
+test/test-disabled-shared
