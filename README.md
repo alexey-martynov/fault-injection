@@ -53,11 +53,19 @@ The entire library can work in 2 modes selected during compilation:
   All fault injection points check at runtime their status and perform
   actions when enabled.
 
-This controls via macro `FAULT_INJECTIONS_ENABLED` when this macro is
-defined and has value greater than 0 all injection points will inject
-logic to corresponding places. Without this macro defined or when its
-value is equal to 0 no fault logic will be injected producing retail
-binary without any performance penalty.
+This is controlled via macro `FAULT_INJECTIONS_ENABLED` when this
+macro is defined and has value greater than 0 all injection points
+will inject logic to corresponding places. Without this macro defined
+or when its value is equal to 0 no fault logic will be injected
+producing retail binary without any performance penalty.
+
+The macro `FAULT_INJECTIONS_DEFINITIONS` controls whether injection
+point definitions included to binary or not. If
+`FAULT_INJECTIONS_ENABLED` is greater than 0 or
+`FAULT_INJECTIONS_DEFINITIONS` is greater than 0 then points are
+defined and can be listed. This allows to disable fault injections but
+have point definitions in place to clearly integrate with any tools
+or provide stable external API.
 
 All fault injection point should be defined before usage at global
 namespace. Every injection point has:

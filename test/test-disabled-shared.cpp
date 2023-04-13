@@ -26,14 +26,14 @@ BOOST_AUTO_TEST_CASE(foreach)
 {
 	  using avm::fault_injection::points;
 
-	  BOOST_CHECK_EQUAL(std::distance(points.begin(), points.end()), 3u);
+	  BOOST_CHECK_EQUAL(std::distance(points.begin(), points.end()), 1u);
 
 	  BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
 	  return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "point1") == 0);
-	  }) != points.end());
+	  }) == points.end());
 	  BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
 	  return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "point2") == 0);
-	  }) != points.end());
+	  }) == points.end());
 	  BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
 	  return (strcmp(point.space, "lib") == 0) && (strcmp(point.name, "point1") == 0);
 	  }) != points.end());

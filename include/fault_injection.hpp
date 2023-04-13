@@ -24,6 +24,9 @@ namespace avm::fault_injection
 		};
 	}
 
+
+#if (FAULT_INJECTIONS_ENABLED > 0) || (FAULT_INJECTIONS_DEFINITIONS > 0)
+
 #define FAULT_INJECTION_POINT_REF(space, name) ::space::fault_injection_point_##name
 
 #if defined(__APPLE__)
@@ -40,6 +43,13 @@ namespace avm::fault_injection
 	}
 #else
 #error "Unsupported platform"
+#endif
+
+#else
+
+#define FAULT_INJECTION_POINT_REF(space, name) nullptr
+#define FAULT_INJECTION_POINT_EX(space, name, error_code)
+
 #endif
 
 #define FAULT_INJECTION_POINT(space, name)	FAULT_INJECTION_POINT_EX(space, name, 0)
@@ -72,6 +82,12 @@ namespace avm::fault_injection
 	bool isActive(const point_t & point);
 
 	__attribute__((visibility("hidden")))
+	inline bool isActive(std::nullptr_t)
+	{
+		return false;
+	}
+
+	__attribute__((visibility("hidden")))
 	void activate(const char * space, const char * name, bool active = true);
 
 	__attribute__((visibility("hidden")))
@@ -81,6 +97,10 @@ namespace avm::fault_injection
 	}
 
 	__attribute__((visibility("hidden")))
+	inline void activate(std::nullptr_t, bool = true)
+	{}
+
+	__attribute__((visibility("hidden")))
 	void setErrorCode(const char * space, const char * name, int error = 0);
 
 	__attribute__((visibility("hidden")))
@@ -88,6 +108,10 @@ namespace avm::fault_injection
 	{
 		point.error_code = error;
 	}
+
+	__attribute__((visibility("hidden")))
+	inline void setErrorCode(std::nullptr_t, int = 0)
+	{}
 
 	class points_collection
 	{
@@ -119,12 +143,14 @@ namespace avm::fault_injection
 			{
 				++ptr_;
 				if (ptr_ == module_->end) {
-					module_ = module_->next;
+					do {
+						module_ = module_->next;
+					} while ((module_ != nullptr) && (module_->begin == module_->end));
 
 					ptr_ = (module_ != nullptr) ? module_->begin : nullptr;
 				}
 
-				return *this;
+ 				return *this;
 			}
 
 			iterator operator ++(int)
@@ -156,9 +182,13 @@ namespace avm::fault_injection
 			{}
 
 			iterator(detail::module_points_t * module):
-				module_(module),
-				ptr_(module != nullptr ? module->begin : nullptr)
-			{}
+				module_(module)
+			{
+				while ((module_ != nullptr) && (module_->begin == module_->end)) {
+					module_ = module_->next;
+				}
+				ptr_ = (module_ != nullptr) ? module_->begin : nullptr;
+			}
 
 			friend class points_collection;
 		};
