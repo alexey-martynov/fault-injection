@@ -191,14 +191,16 @@ namespace avm::fault_injection
 
 			iterator& operator ++()
 			{
-				++ptr_;
-				if (ptr_ == module_->end) {
-					do {
-						module_ = module_->next;
-					} while ((module_ != nullptr) && (module_->begin == module_->end));
+				do {
+					++ptr_;
+					if (ptr_ == module_->end) {
+						do {
+							module_ = module_->next;
+						} while ((module_ != nullptr) && (module_->begin == module_->end));
 
-					ptr_ = (module_ != nullptr) ? module_->begin : nullptr;
-				}
+						ptr_ = (module_ != nullptr) ? module_->begin : nullptr;
+					}
+				} while ((ptr_ != nullptr) && (*ptr_ == nullptr));
 
  				return *this;
 			}
@@ -238,6 +240,11 @@ namespace avm::fault_injection
 					module_ = module_->next;
 				}
 				ptr_ = (module_ != nullptr) ? module_->begin : nullptr;
+
+				if ((ptr_ != nullptr) && (*ptr_ == nullptr)) {
+					// Skip fake instance
+					++*this;
+				}
 			}
 
 			friend class points_collection;
