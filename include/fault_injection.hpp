@@ -38,6 +38,7 @@ namespace avm::fault_injection
 			module_points_t * next;
 			avm::fault_injection::point_t ** const begin;
 			avm::fault_injection::point_t ** const end;
+			bool registered;
 		};
 	}
 
@@ -105,9 +106,16 @@ namespace avm::fault_injection
 		return (point != nullptr) ? FAULT_INJECTION_READ(point->active) : false;
 	}
 
-	// NOTE: This function is not inlined to force link library
 	__attribute__((visibility("hidden")))
-	bool isActive(const point_t & point);
+	inline bool isActive(const point_t & point)
+	{
+		if (FAULT_INJECTION_READ(point.active)) {
+			registerModule();
+			return true;
+		}
+
+		return false;
+	}
 
 	__attribute__((visibility("hidden")))
 	inline bool isActive(std::nullptr_t)

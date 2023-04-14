@@ -14,7 +14,8 @@ __attribute__((visibility("hidden")))
 static avm::fault_injection::detail::module_points_t fault_injections = {
 	.next = nullptr,
 	.begin = &first_injection,
-	.end = &last_injection
+	.end = &last_injection,
+	.registered = false,
 };
 #elif defined(__linux__)
 __attribute__((visibility("hidden")))
@@ -24,7 +25,8 @@ extern avm::fault_injection::point_t *__stop___faults;
 static avm::fault_injection::detail::module_points_t fault_injections = {
 	.next = nullptr,
 	.begin = &__start___faults,
-	.end = &__stop__faults
+	.end = &__stop__faults,
+	.registered = false,
 };
 #else
 #error "Unsupported platform"
@@ -60,6 +62,7 @@ namespace avm::fault_injection
 
 		module->next = points;
 		points->next = nullptr;
+		points->registered = true;
 	}
 
 	__attribute__((weak))
@@ -81,11 +84,6 @@ avm::fault_injection::point_t * avm::fault_injection::find(const char * space, c
 	return nullptr;
 }
 
-bool avm::fault_injection::isActive(const point_t & point)
-{
-	return point.active;
-}
-
 avm::fault_injection::points_collection::iterator avm::fault_injection::points_collection::begin()
 {
 	return iterator{getModule()};
@@ -98,7 +96,9 @@ avm::fault_injection::points_collection::iterator avm::fault_injection::points_c
 
 void avm::fault_injection::registerModule()
 {
-	avm::fault_injection::registerModuleImpl(&fault_injections);
+	if (!fault_injections.registered) {
+		avm::fault_injection::registerModuleImpl(&fault_injections);
+	}
 }
 
 __attribute__((used,constructor))
