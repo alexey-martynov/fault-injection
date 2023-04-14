@@ -1,6 +1,18 @@
 // -*- compile-command: "cd .. && make test" -*-
 #pragma once
 
+#if !defined(FAULT_INJECTION_HAS_THREADS)
+#define FAULT_INJECTION_HAS_THREADS 1
+#define FAULT_INJECTION_READ(var) ((var).load(std::memory_order_acquire))
+#define FAULT_INJECTION_WRITE(var, value) ((var).store(value, std::memory_order_release))
+#else
+#define FAULT_INJECTION_READ(var) (var)
+#define FAULT_INJECTION_WRITE(var, value) (var) = (value)
+#endif
+
+#if FAULT_INJECTION_HAS_THREADS > 0
+#include <atomic>
+#endif
 #include <cassert>
 #include <iterator>
 
@@ -10,8 +22,13 @@ namespace avm::fault_injection
 	{
 		const char * const space;
 		const char * const name;
+#if FAULT_INJECTION_HAS_THREADS > 0
+		std::atomic<int> error_code;
+		std::atomic<bool> active;
+#else
 		int error_code;
 		bool active;
+#endif
 	};
 
 	namespace detail
@@ -56,8 +73,12 @@ namespace avm::fault_injection
 
 #if FAULT_INJECTIONS_ENABLED > 0
 
-#define FAULT_INJECT_ERROR_CODE(space, name, action) (::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name)) ? FAULT_INJECTION_POINT_REF(space, name).error_code : (action))
-#define FAULT_INJECT_ERRNO_EX(space, name, action, result) (::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name)) ? ((errno = FAULT_INJECTION_POINT_REF(space, name).error_code), (result)) : (action))
+#define FAULT_INJECT_ERROR_CODE(space, name, action) (::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name)) \
+			? (FAULT_INJECTION_READ(FAULT_INJECTION_POINT_REF(space, name).error_code)) \
+			: (action))
+#define FAULT_INJECT_ERRNO_EX(space, name, action, result) (::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name)) \
+			? ((errno = FAULT_INJECTION_READ(FAULT_INJECTION_POINT_REF(space, name).error_code)), (result)) \
+			: (action))
 #define FAULT_INJECT_EXCEPTION(space, name, exception) do { if (::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name))) { throw (exception); } } while (false)
 
 #else
@@ -77,8 +98,14 @@ namespace avm::fault_injection
 	point_t * find(const char * space, const char * name);
 
 	__attribute__((visibility("hidden")))
-	bool isActive(const char * space, const char * name);
+	inline bool isActive(const char * space, const char * name)
+	{
+		point_t * point = find(space, name);
 
+		return (point != nullptr) ? FAULT_INJECTION_READ(point->active) : false;
+	}
+
+	// NOTE: This function is not inlined to force link library
 	__attribute__((visibility("hidden")))
 	bool isActive(const point_t & point);
 
@@ -89,12 +116,19 @@ namespace avm::fault_injection
 	}
 
 	__attribute__((visibility("hidden")))
-	void activate(const char * space, const char * name, bool active = true);
+	inline void activate(const char * space, const char * name, bool active = true)
+	{
+		point_t * point = find(space, name);
+
+		if (point != nullptr) {
+			point->active = active;
+		}
+	}
 
 	__attribute__((visibility("hidden")))
 	inline void activate(point_t & point, bool active = true)
 	{
-		point.active = active;
+		FAULT_INJECTION_WRITE(point.active, active);
 	}
 
 	__attribute__((visibility("hidden")))
@@ -102,12 +136,19 @@ namespace avm::fault_injection
 	{}
 
 	__attribute__((visibility("hidden")))
-	void setErrorCode(const char * space, const char * name, int error = 0);
+	inline void setErrorCode(const char * space, const char * name, int error = 0)
+	{
+		point_t * point = find(space, name);
+
+		if (point != nullptr) {
+			FAULT_INJECTION_WRITE(point->error_code, error);
+		}
+	}
 
 	__attribute__((visibility("hidden")))
 	inline void setErrorCode(point_t & point, int error = 0)
 	{
-		point.error_code = error;
+		FAULT_INJECTION_WRITE(point.error_code, error);
 	}
 
 	__attribute__((visibility("hidden")))

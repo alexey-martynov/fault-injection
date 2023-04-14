@@ -13,7 +13,7 @@ This library provides simple fault injection support. It's benefits:
 
 * Small.
 
-* Built as static library;
+* Built as static library.
 
 * Allow injections of:
   - return codes,
@@ -22,6 +22,8 @@ This library provides simple fault injection support. It's benefits:
   
 * Enumerating injection points and controlling their status to
   implement external control.
+  
+* Thread support can be turned off.
   
 * The custom build scripts and translation units with many includes
   are not required.
@@ -104,6 +106,22 @@ during process of loading. This performed via "constructor"
 function. All modules chained to a list allowing search by space and
 name. This "constructor" function is linked automatically when library
 is used.
+
+Thread Safety
+-------------
+
+By default the library implements thread safe access to its data via
+atomic operations. The error code and activation status are atomic
+variables and access to their values by all library API uses
+Release-Acquire ordering.
+
+To have safe access to injection point data 2 macros are added:
+`FAULT_INJECT_READ(var)` and `FAULT_INJECT_WRITE(var, value)`. These
+macros use Release-Acquire ordering when thread support is turned on
+and direct access when it is turned off.
+
+The thread support is turned on by default and it can be turned of by
+defining `FAULT_INJECTION_HAS_THREADS` to 0.
 
 API
 ---

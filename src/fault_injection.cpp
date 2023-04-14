@@ -81,34 +81,9 @@ avm::fault_injection::point_t * avm::fault_injection::find(const char * space, c
 	return nullptr;
 }
 
-bool avm::fault_injection::isActive(const char * space, const char * name)
-{
-	point_t * point = find(space, name);
-
-	return (point != nullptr) ? point->active : false;
-}
-
 bool avm::fault_injection::isActive(const point_t & point)
 {
 	return point.active;
-}
-
-void avm::fault_injection::activate(const char * space, const char * name, bool active)
-{
-	point_t * point = find(space, name);
-
-	if (point != nullptr) {
-		point->active = active;
-	}
-}
-
-void avm::fault_injection::setErrorCode(const char * space, const char * name, int error)
-{
-	point_t * point = find(space, name);
-
-	if (point != nullptr) {
-		point->error_code = error;
-	}
 }
 
 avm::fault_injection::points_collection::iterator avm::fault_injection::points_collection::begin()
