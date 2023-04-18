@@ -15,7 +15,7 @@ CXXFLAGS     += -std=$(CXX_STANDARD) -Iinclude -fPIC -g -Wall -Wextra -Werror -M
 LDFLAGS      += -g
 LDLIBS       := -lboost_unit_test_framework
 
-all: libavm_fault_injection.a test/test test/test-shared test/test-disabled-shared
+all: libavm_fault_injection.a
 
 libavm_fault_injection.a: src/fault_injection.o
 	ar rcs $@ $^
@@ -43,4 +43,7 @@ test: test/test test/test-shared test/test-disabled-shared
 clean:
 	rm -f libavm_fault_injection.a $(wildcard src/*.o) $(wildcard src/*.d) test/test test/test-shared $(wildcard test/*.$(shared_lib_suffix)) $(wildcard test/*.o) $(wildcard test/*.d)
 
+ifneq 'clean' '$(findstring clean,$(MAKECMDGOALS))'
 include $(wildcard src/*.d) $(wildcard test/*.d)
+endif
+
