@@ -9,7 +9,7 @@ very hard because it impossible to mock interfaces (they are just
 missing) or system calls. In such circumstances the "Fault Injection"
 technique is used.
 
-This library provides simple fault injection support. It's benefits:
+This library provides simple fault injection support. Its benefits:
 
 * Small.
 
@@ -231,3 +231,14 @@ of defined points.
 All available injection points can be iterated via range-like
 object `points`. It offers range of all registered injection points in
 all loaded modules.
+
+### Test Helpers
+
+Since tests want to activate fault injection in specific mode and with
+specific error code, run code and then deactivate injection very often
+the `InjectionStateGuard` class implements scoped guard to perform
+these tasks. It allows to enable point optionally setting mode and
+error code. If point has been inactive at the time of guard
+construction it will be deactivated back upon destruction of
+guard. The specified mode and error code will be set to point on
+construction and returned back to previous values on destruction.

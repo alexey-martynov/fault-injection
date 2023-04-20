@@ -202,6 +202,26 @@ namespace avm::fault_injection
 	inline void setErrorCode(std::nullptr_t, int = 0)
 	{}
 
+	__attribute__((visibility("hidden")))
+	inline int getErrorCode(const char * space, const char * name)
+	{
+		point_t * point = find(space, name);
+
+		return (point != nullptr) ? FAULT_INJECTION_READ(point->error_code) : 0;
+	}
+
+	__attribute__((visibility("hidden")))
+	inline int getErrorCode(point_t & point)
+	{
+		return FAULT_INJECTION_READ(point.error_code);
+	}
+
+	__attribute__((visibility("hidden")))
+	inline int getErrorCode(std::nullptr_t)
+	{
+		return 0;
+	}
+
 	class points_collection
 	{
 	public:

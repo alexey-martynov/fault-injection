@@ -9,6 +9,7 @@
 #include <stdexcept>
 
 #include <fault_injection.hpp>
+#include <fault_injection_test_helper.hpp>
 
 FAULT_INJECTION_POINT(test, simple);
 FAULT_INJECTION_POINT(test, second);
@@ -109,6 +110,83 @@ BOOST_AUTO_TEST_CASE(error_oneshot)
 
 	BOOST_CHECK_EQUAL(value1, 0);
 	BOOST_CHECK_EQUAL(value2, 16);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(guard)
+
+BOOST_AUTO_TEST_CASE(error_default)
+{
+	{
+		avm::fault_injection::InjectionStateGuard guard(FAULT_INJECTION_POINT_REF(test, simple));
+
+		const int value = FAULT_INJECT_ERROR_CODE(test, simple, 15);
+
+		BOOST_CHECK_EQUAL(value, 0);
+	}
+
+	BOOST_CHECK(!avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(test, simple)));
+}
+
+BOOST_AUTO_TEST_CASE(error_custom)
+{
+	{
+		avm::fault_injection::InjectionStateGuard guard(FAULT_INJECTION_POINT_REF(test, simple), -10);
+
+		const int value = FAULT_INJECT_ERROR_CODE(test, simple, 15);
+
+		BOOST_CHECK_EQUAL(value, -10);
+	}
+
+	BOOST_CHECK(!avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(test, simple)));
+	BOOST_CHECK_EQUAL(avm::fault_injection::getErrorCode(FAULT_INJECTION_POINT_REF(test, simple)), 0);
+}
+
+BOOST_AUTO_TEST_CASE(error_custom_by_name)
+{
+	{
+		avm::fault_injection::InjectionStateGuard guard("test", "simple", -10);
+
+		const int value = FAULT_INJECT_ERROR_CODE(test, simple, 15);
+
+		BOOST_CHECK_EQUAL(value, -10);
+	}
+
+	BOOST_CHECK(!avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(test, simple)));
+	BOOST_CHECK_EQUAL(avm::fault_injection::getErrorCode(FAULT_INJECTION_POINT_REF(test, simple)), 0);
+}
+
+BOOST_AUTO_TEST_CASE(error_oneshot)
+{
+	{
+		avm::fault_injection::InjectionStateGuard guard(FAULT_INJECTION_POINT_REF(test, simple), avm::fault_injection::mode_t::oneshot);
+
+
+		const int value1 = FAULT_INJECT_ERROR_CODE(test, simple, 15);
+		const int value2 = FAULT_INJECT_ERROR_CODE(test, simple, 16);
+
+		BOOST_CHECK_EQUAL(value1, 0);
+		BOOST_CHECK_EQUAL(value2, 16);
+	}
+
+	BOOST_CHECK(!avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(test, simple)));
+}
+
+BOOST_AUTO_TEST_CASE(error_oneshot_custom_error)
+{
+	{
+		avm::fault_injection::InjectionStateGuard guard(FAULT_INJECTION_POINT_REF(test, simple), avm::fault_injection::mode_t::oneshot, -10);
+
+
+		const int value1 = FAULT_INJECT_ERROR_CODE(test, simple, 15);
+		const int value2 = FAULT_INJECT_ERROR_CODE(test, simple, 16);
+
+		BOOST_CHECK_EQUAL(value1, -10);
+		BOOST_CHECK_EQUAL(value2, 16);
+	}
+
+	BOOST_CHECK(!avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(test, simple)));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
