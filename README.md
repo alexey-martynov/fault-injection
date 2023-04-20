@@ -19,7 +19,9 @@ This library provides simple fault injection support. It's benefits:
   - return codes,
   - `errno`,
   - throwing exceptions.
-  
+
+* One-shot and multiple triggering.
+
 * Enumerating injection points and controlling their status to
   implement external control.
   
@@ -206,9 +208,15 @@ of defined points.
 `isActive("space", "name")`
 : returns `true` when point active.
 
-`activate(FAULT_INJECTION_POINT_REF(space, name), active = true)` or
-`activate("space", "name", active = true)`
-: activate (when `active` is `true`) or deactivate point.
+`activate(FAULT_INJECTION_POINT_REF(space, name), mode = mode_t::multiple)` or
+`activate("space", "name", mode = mode_t::multiple)`
+: activate point. If `mode` is `mode_t::multiple` the point will
+  triggers every time until explicitly deactivated, if
+  `mode_t::oneshot` it will self-deactivate on first trigger.
+
+`deactivate(FAULT_INJECTION_POINT_REF(space, name))` or
+`deactivate("space", "name")`
+: deactivate point.
 
 `setErrorCode(FAULT_INJECTION_POINT_REF(space, name), error = 0)` or
 `activate("space", "name", error = 0)`

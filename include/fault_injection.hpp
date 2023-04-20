@@ -4,7 +4,7 @@
 #if !defined(FAULT_INJECTION_HAS_THREADS)
 #define FAULT_INJECTION_HAS_THREADS 1
 #define FAULT_INJECTION_READ(var) ((var).load(std::memory_order_acquire))
-#define FAULT_INJECTION_WRITE(var, value) ((var).store(value, std::memory_order_release))
+#define FAULT_INJECTION_WRITE(var, value) ((var).store(value, std::memory_order_release), value)
 #else
 #define FAULT_INJECTION_READ(var) (var)
 #define FAULT_INJECTION_WRITE(var, value) (var) = (value)
@@ -13,11 +13,17 @@
 #if FAULT_INJECTION_HAS_THREADS > 0
 #include <atomic>
 #endif
+#include <cstdint>
 #include <cassert>
 #include <iterator>
 
 namespace avm::fault_injection
 {
+	enum class mode_t: std::uint8_t {
+		multiple,
+		oneshot
+	};
+
 	struct point_t
 	{
 		const char * const space;
@@ -25,9 +31,11 @@ namespace avm::fault_injection
 #if FAULT_INJECTION_HAS_THREADS > 0
 		std::atomic<int> error_code;
 		std::atomic<bool> active;
+		std::atomic<mode_t> mode;
 #else
 		int error_code;
 		bool active;
+		mode_t mode;
 #endif
 	};
 
@@ -50,13 +58,13 @@ namespace avm::fault_injection
 #if defined(__APPLE__)
 #define FAULT_INJECTION_POINT_EX(space, name, error_code)	  \
 	namespace space { \
-		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { #space, #name, error_code, false }; \
+		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { #space, #name, error_code, false, ::avm::fault_injection::mode_t::multiple }; \
 		static ::avm::fault_injection::point_t * fault_injection_point_##name##_ptr __attribute__((used,section("__DATA,__faults"))) = &FAULT_INJECTION_POINT_REF(space, name); \
 	}
 #elif defined(__linux__)
 #define FAULT_INJECTION_POINT_EX(space, name, error_code)	  \
 	namespace space { \
-		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { #space, #name, error_code, false }; \
+		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { #space, #name, error_code, false, ::avm::fault_injection::mode_t::multiple }; \
 		static ::avm::fault_injection::point_t * fault_injection_point_##name##_ptr __attribute__((used,section("__faults"))) = &FAULT_INJECTION_POINT_REF(space, name); \
 	}
 #else
@@ -74,13 +82,22 @@ namespace avm::fault_injection
 
 #if FAULT_INJECTIONS_ENABLED > 0
 
+#define FAULT_INJECTION_ONESHOT(space, name) ((FAULT_INJECTION_READ(FAULT_INJECTION_POINT_REF(space, name).mode) == ::avm::fault_injection::mode_t::multiple) \
+			? true																														\
+			: FAULT_INJECTION_WRITE(FAULT_INJECTION_POINT_REF(space, name).active, false))
+
 #define FAULT_INJECT_ERROR_CODE(space, name, action) (::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name)) \
-			? (FAULT_INJECTION_READ(FAULT_INJECTION_POINT_REF(space, name).error_code)) \
+			? (FAULT_INJECTION_ONESHOT(space, name), FAULT_INJECTION_READ(FAULT_INJECTION_POINT_REF(space, name).error_code)) \
 			: (action))
 #define FAULT_INJECT_ERRNO_EX(space, name, action, result) (::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name)) \
-			? ((errno = FAULT_INJECTION_READ(FAULT_INJECTION_POINT_REF(space, name).error_code)), (result)) \
+			? (FAULT_INJECTION_ONESHOT(space, name), (errno = FAULT_INJECTION_READ(FAULT_INJECTION_POINT_REF(space, name).error_code)), (result)) \
 			: (action))
-#define FAULT_INJECT_EXCEPTION(space, name, exception) do { if (::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name))) { throw (exception); } } while (false)
+#define FAULT_INJECT_EXCEPTION(space, name, exception) do {							\
+		if (::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name))) { \
+			static_cast<void>(FAULT_INJECTION_ONESHOT(space, name)); \
+			throw (exception);										\
+		}																				\
+	} while (false)
 
 #else
 
@@ -124,23 +141,45 @@ namespace avm::fault_injection
 	}
 
 	__attribute__((visibility("hidden")))
-	inline void activate(const char * space, const char * name, bool active = true)
+	inline void activate(const char * space, const char * name, mode_t mode = mode_t::multiple)
 	{
 		point_t * point = find(space, name);
 
 		if (point != nullptr) {
-			point->active = active;
+			FAULT_INJECTION_WRITE(point->mode, mode);
+			FAULT_INJECTION_WRITE(point->active, true);
 		}
 	}
 
 	__attribute__((visibility("hidden")))
-	inline void activate(point_t & point, bool active = true)
+	inline void activate(point_t & point, mode_t mode = mode_t::multiple)
 	{
-		FAULT_INJECTION_WRITE(point.active, active);
+		FAULT_INJECTION_WRITE(point.mode, mode);
+		FAULT_INJECTION_WRITE(point.active, true);
 	}
 
 	__attribute__((visibility("hidden")))
-	inline void activate(std::nullptr_t, bool = true)
+	inline void activate(std::nullptr_t, mode_t = mode_t::multiple)
+	{}
+
+	__attribute__((visibility("hidden")))
+	inline void deactivate(const char * space, const char * name)
+	{
+		point_t * point = find(space, name);
+
+		if (point != nullptr) {
+			point->active = false;
+		}
+	}
+
+	__attribute__((visibility("hidden")))
+	inline void deactivate(point_t & point)
+	{
+		FAULT_INJECTION_WRITE(point.active, false);
+	}
+
+	__attribute__((visibility("hidden")))
+	inline void deactivate(std::nullptr_t)
 	{}
 
 	__attribute__((visibility("hidden")))

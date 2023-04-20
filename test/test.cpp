@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE(error_default)
 
 	const int value = FAULT_INJECT_ERROR_CODE(test, simple, 15);
 
-	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(test, simple), false);
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(test, simple));
 
 	BOOST_CHECK_EQUAL(value, 0);
 }
@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(error_custom)
 	const int value = FAULT_INJECT_ERROR_CODE(test, simple, 15);
 
 	avm::fault_injection::setErrorCode(FAULT_INJECTION_POINT_REF(test, simple));
-	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(test, simple), false);
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(test, simple));
 
 	BOOST_CHECK_EQUAL(value, -10);
 }
@@ -80,9 +80,35 @@ BOOST_AUTO_TEST_CASE(error_custom_by_name)
 	const int value = FAULT_INJECT_ERROR_CODE(test, simple, 15);
 
 	avm::fault_injection::setErrorCode("test", "simple");
-	avm::fault_injection::activate("test", "simple", false);
+	avm::fault_injection::deactivate("test", "simple");
 
 	BOOST_CHECK_EQUAL(value, -10);
+}
+
+BOOST_AUTO_TEST_CASE(error_multiple)
+{
+	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(test, simple), avm::fault_injection::mode_t::multiple);
+
+	const int value1 = FAULT_INJECT_ERROR_CODE(test, simple, 15);
+	const int value2 = FAULT_INJECT_ERROR_CODE(test, simple, 16);
+
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(test, simple));
+
+	BOOST_CHECK_EQUAL(value1, 0);
+	BOOST_CHECK_EQUAL(value2, 0);
+}
+
+BOOST_AUTO_TEST_CASE(error_oneshot)
+{
+	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(test, simple), avm::fault_injection::mode_t::oneshot);
+
+	const int value1 = FAULT_INJECT_ERROR_CODE(test, simple, 15);
+	const int value2 = FAULT_INJECT_ERROR_CODE(test, simple, 16);
+
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(test, simple));
+
+	BOOST_CHECK_EQUAL(value1, 0);
+	BOOST_CHECK_EQUAL(value2, 16);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -113,7 +139,7 @@ BOOST_AUTO_TEST_CASE(error_default)
 	};
 	const int value = FAULT_INJECT_ERRNO(test, simple, action());
 
-	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(test, simple), false);
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(test, simple));
 
 	BOOST_CHECK_EQUAL(value, -1);
 	BOOST_CHECK_EQUAL(errno, 0);
@@ -133,7 +159,7 @@ BOOST_AUTO_TEST_CASE(error_custom)
 	const int value = FAULT_INJECT_ERRNO(test, simple, action());
 
 	avm::fault_injection::setErrorCode(FAULT_INJECTION_POINT_REF(test, simple));
-	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(test, simple), false);
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(test, simple));
 
 	BOOST_CHECK_EQUAL(value, -1);
 	BOOST_CHECK_EQUAL(errno, EAGAIN);
@@ -151,7 +177,7 @@ BOOST_AUTO_TEST_CASE(error_default_ex)
 	};
 	const int value = FAULT_INJECT_ERRNO_EX(test, simple, action(), -10);
 
-	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(test, simple), false);
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(test, simple));
 
 	BOOST_CHECK_EQUAL(value, -10);
 	BOOST_CHECK_EQUAL(errno, 0);
@@ -171,11 +197,49 @@ BOOST_AUTO_TEST_CASE(error_custom_ex)
 	const int value = FAULT_INJECT_ERRNO_EX(test, simple, action(), -10);
 
 	avm::fault_injection::setErrorCode(FAULT_INJECTION_POINT_REF(test, simple));
-	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(test, simple), false);
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(test, simple));
 
 	BOOST_CHECK_EQUAL(value, -10);
 	BOOST_CHECK_EQUAL(errno, EAGAIN);
 	BOOST_CHECK(!called);
+}
+
+BOOST_AUTO_TEST_CASE(error_multiple)
+{
+	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(test, simple), avm::fault_injection::mode_t::multiple);
+
+	bool called = false;
+	auto action = [&called] {
+		called = true;
+		return 0;
+	};
+	const int value1 = FAULT_INJECT_ERRNO(test, simple, action());
+	const int value2 = FAULT_INJECT_ERRNO(test, simple, action());
+
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(test, simple));
+
+	BOOST_CHECK_EQUAL(value1, -1);
+	BOOST_CHECK_EQUAL(value2, -1);
+	BOOST_CHECK(!called);
+}
+
+BOOST_AUTO_TEST_CASE(error_oneshot)
+{
+	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(test, simple), avm::fault_injection::mode_t::oneshot);
+
+	int called = 0;
+	auto action = [&called] {
+		++called;
+		return 0;
+	};
+	const int value1 = FAULT_INJECT_ERRNO(test, simple, action());
+	const int value2 = FAULT_INJECT_ERRNO(test, simple, action());
+
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(test, simple));
+
+	BOOST_CHECK_EQUAL(value1, -1);
+	BOOST_CHECK_EQUAL(value2, 0);
+	BOOST_CHECK_EQUAL(called, 1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
@@ -193,7 +257,27 @@ BOOST_AUTO_TEST_CASE(error)
 
 	BOOST_CHECK_EXCEPTION(FAULT_INJECT_EXCEPTION(test, simple, std::runtime_error("INJECTED")), std::runtime_error, isInjected);
 
-	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(test, simple), false);
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(test, simple));
+}
+
+BOOST_AUTO_TEST_CASE(error_multiple)
+{
+	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(test, simple), avm::fault_injection::mode_t::multiple);
+
+	BOOST_CHECK_EXCEPTION(FAULT_INJECT_EXCEPTION(test, simple, std::runtime_error("INJECTED")), std::runtime_error, isInjected);
+	BOOST_CHECK_EXCEPTION(FAULT_INJECT_EXCEPTION(test, simple, std::runtime_error("INJECTED")), std::runtime_error, isInjected);
+
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(test, simple));
+}
+
+BOOST_AUTO_TEST_CASE(error_oneshot)
+{
+	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(test, simple), avm::fault_injection::mode_t::oneshot);
+
+	BOOST_CHECK_EXCEPTION(FAULT_INJECT_EXCEPTION(test, simple, std::runtime_error("INJECTED")), std::runtime_error, isInjected);
+	BOOST_CHECK_NO_THROW(FAULT_INJECT_EXCEPTION(test, simple, std::runtime_error("INJECTED")));
+
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(test, simple));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
