@@ -198,7 +198,20 @@ The fault can be injected via one of the following macros.
 : when inactive does nothing, when active throws `exception`.
 
   Requires semicolon after.
-  
+
+The separate set of macros allows injection of point with additional
+condition to check before trigger. If condition is true the point is
+triggered. If point is not triggered the one-shot point is not
+deactivated because no error injected. These macros has `IF` inside:
+
+* `FAULT_INJECT_ERROR_CODE_IF(space, name, condition, action)`
+
+* `FAULT_INJECT_ERRNO_IF(space, name, condition, action)`
+
+* `FAULT_INJECT_ERRNO_IF_EX(space, name, condition, action, result)`
+
+* `FAULT_INJECT_EXCEPTION_IF(space, name, condition, exception)`
+
 ### Manipulating
 
 All functions that receive 2 parameters perform search over the list

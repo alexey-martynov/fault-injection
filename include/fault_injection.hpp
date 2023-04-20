@@ -83,31 +83,35 @@ namespace avm::fault_injection
 #if FAULT_INJECTIONS_ENABLED > 0
 
 #define FAULT_INJECTION_ONESHOT(space, name) ((FAULT_INJECTION_READ(FAULT_INJECTION_POINT_REF(space, name).mode) == ::avm::fault_injection::mode_t::multiple) \
-			? true																														\
-			: FAULT_INJECTION_WRITE(FAULT_INJECTION_POINT_REF(space, name).active, false))
+			? true \
+			: FAULT_INJECTION_WRITE(FAULT_INJECTION_POINT_REF(space, name).active, false)) \
 
-#define FAULT_INJECT_ERROR_CODE(space, name, action) (::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name)) \
+#define FAULT_INJECT_ERROR_CODE_IF(space, name, condition, action) ((::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name)) && (condition)) \
 			? (FAULT_INJECTION_ONESHOT(space, name), FAULT_INJECTION_READ(FAULT_INJECTION_POINT_REF(space, name).error_code)) \
 			: (action))
-#define FAULT_INJECT_ERRNO_EX(space, name, action, result) (::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name)) \
+#define FAULT_INJECT_ERRNO_IF_EX(space, name, condition, action, result) ((::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name)) && (condition)) \
 			? (FAULT_INJECTION_ONESHOT(space, name), (errno = FAULT_INJECTION_READ(FAULT_INJECTION_POINT_REF(space, name).error_code)), (result)) \
 			: (action))
-#define FAULT_INJECT_EXCEPTION(space, name, exception) do {							\
-		if (::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name))) { \
+#define FAULT_INJECT_EXCEPTION_IF(space, name, condition, exception) do { \
+		if (::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name)) && (condition)) { \
 			static_cast<void>(FAULT_INJECTION_ONESHOT(space, name)); \
-			throw (exception);										\
-		}																				\
+			throw (exception); \
+		} \
 	} while (false)
 
 #else
 
-#define FAULT_INJECT_ERROR_CODE(space, name, action) (action)
-#define FAULT_INJECT_ERRNO_EX(space, name, action, result) (action)
-#define FAULT_INJECT_EXCEPTION(space, name, exception)
+#define FAULT_INJECT_ERROR_CODE_IF(space, name, condition, action) (action)
+#define FAULT_INJECT_ERRNO_IF_EX(space, name, condition, action, result) (action)
+#define FAULT_INJECT_EXCEPTION_IF(space, name, condition, exception)
 
 #endif
 
-#define FAULT_INJECT_ERRNO(space, name, action) FAULT_INJECT_ERRNO_EX(space, name, action, -1)
+#define FAULT_INJECT_ERROR_CODE(space, name, action) FAULT_INJECT_ERROR_CODE_IF(space, name, true, action)
+#define FAULT_INJECT_ERRNO(space, name, action) FAULT_INJECT_ERRNO_IF_EX(space, name, true, action, -1)
+#define FAULT_INJECT_ERRNO_EX(space, name, action, result) FAULT_INJECT_ERRNO_IF_EX(space, name, true, action, result)
+#define FAULT_INJECT_ERRNO_IF(space, name, condition, action) FAULT_INJECT_ERRNO_IF_EX(space, name, condition, action, -1)
+#define FAULT_INJECT_EXCEPTION(space, name, exception) FAULT_INJECT_EXCEPTION_IF(space, name, true, exception)
 
 	__attribute__((visibility("hidden")))
 	void registerModule();

@@ -112,6 +112,26 @@ BOOST_AUTO_TEST_CASE(error_oneshot)
 	BOOST_CHECK_EQUAL(value2, 16);
 }
 
+BOOST_AUTO_TEST_CASE(error_condition_false)
+{
+	avm::fault_injection::InjectionStateGuard guard(FAULT_INJECTION_POINT_REF(test, simple));
+	bool enabled = false;
+
+	const int value1 = FAULT_INJECT_ERROR_CODE_IF(test, simple, enabled, 15);
+
+	BOOST_CHECK_EQUAL(value1, 15);
+}
+
+BOOST_AUTO_TEST_CASE(error_condition_true)
+{
+	avm::fault_injection::InjectionStateGuard guard(FAULT_INJECTION_POINT_REF(test, simple));
+	bool enabled = true;
+
+	const int value1 = FAULT_INJECT_ERROR_CODE_IF(test, simple, enabled, 15);
+
+	BOOST_CHECK_EQUAL(value1, 0);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(guard)
@@ -320,6 +340,75 @@ BOOST_AUTO_TEST_CASE(error_oneshot)
 	BOOST_CHECK_EQUAL(called, 1);
 }
 
+BOOST_AUTO_TEST_CASE(error_default_condition_false)
+{
+	avm::fault_injection::InjectionStateGuard guard(FAULT_INJECTION_POINT_REF(test, simple));
+
+	bool called = false;
+	auto action = [&called] {
+		called = true;
+		return 0;
+	};
+	bool enabled = false;
+	const int value = FAULT_INJECT_ERRNO_IF(test, simple, enabled, action());
+
+	BOOST_CHECK_EQUAL(value, 0);
+	BOOST_CHECK(called);
+}
+
+BOOST_AUTO_TEST_CASE(error_default_condition_true)
+{
+	avm::fault_injection::InjectionStateGuard guard(FAULT_INJECTION_POINT_REF(test, simple));
+
+	bool called = false;
+	auto action = [&called] {
+		called = true;
+		return 0;
+	};
+	bool enabled = true;
+	const int value = FAULT_INJECT_ERRNO_IF(test, simple, enabled, action());
+
+	BOOST_CHECK_EQUAL(value, -1);
+	BOOST_CHECK_EQUAL(errno, 0);
+	BOOST_CHECK(!called);
+}
+
+BOOST_AUTO_TEST_CASE(error_default_ex_condition_false)
+{
+	avm::fault_injection::InjectionStateGuard guard(FAULT_INJECTION_POINT_REF(test, simple));
+
+	bool called = false;
+	auto action = [&called] {
+		called = true;
+		return 0;
+	};
+	bool enabled = false;
+	const int value = FAULT_INJECT_ERRNO_IF_EX(test, simple, enabled, action(), -10);
+
+	BOOST_CHECK_EQUAL(value, 0);
+	BOOST_CHECK(called);
+}
+
+BOOST_AUTO_TEST_CASE(error_default_ex_condition_true)
+{
+	avm::fault_injection::InjectionStateGuard guard(FAULT_INJECTION_POINT_REF(test, simple));
+
+	bool called = false;
+	auto action = [&called] {
+		called = true;
+		return 0;
+	};
+	bool enabled = true;
+	const int value = FAULT_INJECT_ERRNO_IF_EX(test, simple, enabled, action(), -10);
+
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(test, simple));
+
+	BOOST_CHECK_EQUAL(value, -10);
+	BOOST_CHECK_EQUAL(errno, 0);
+	BOOST_CHECK(!called);
+}
+
+
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(exception)
@@ -356,6 +445,22 @@ BOOST_AUTO_TEST_CASE(error_oneshot)
 	BOOST_CHECK_NO_THROW(FAULT_INJECT_EXCEPTION(test, simple, std::runtime_error("INJECTED")));
 
 	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(test, simple));
+}
+
+BOOST_AUTO_TEST_CASE(error_condition_false)
+{
+	avm::fault_injection::InjectionStateGuard guard(FAULT_INJECTION_POINT_REF(test, simple));
+	bool enabled = false;
+
+	BOOST_CHECK_NO_THROW(FAULT_INJECT_EXCEPTION_IF(test, simple, enabled, std::runtime_error("INJECTED")));
+}
+
+BOOST_AUTO_TEST_CASE(error_condition_true)
+{
+	avm::fault_injection::InjectionStateGuard guard(FAULT_INJECTION_POINT_REF(test, simple));
+	bool enabled = true;
+
+	BOOST_CHECK_EXCEPTION(FAULT_INJECT_EXCEPTION_IF(test, simple, enabled, std::runtime_error("INJECTED")), std::runtime_error, isInjected);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
