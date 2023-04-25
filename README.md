@@ -163,7 +163,7 @@ macros:
 : define fault injection point with `space` and `name`, the
   `error_code` will be 0.
   
-`FAULT_INJECTION_POINT_E(space, name, error_code)`
+`FAULT_INJECTION_POINT_EX(space, name, error_code)`
 : define fault injection point with `space`, `name` and default
   `error_code`.
   
@@ -198,6 +198,11 @@ The fault can be injected via one of the following macros.
 : when inactive does nothing, when active throws `exception`.
 
   Requires semicolon after.
+
+`FAULT_INJECT_ACTION(space, name, exception)`
+: when inactive does nothing, when active performs `action`. `action`
+  can be a complex statement by using `do { ... } while (false)`
+  construct.
 
 The separate set of macros allows injection of point with additional
 condition to check before trigger. If condition is true the point is

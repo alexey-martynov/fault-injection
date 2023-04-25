@@ -464,3 +464,26 @@ BOOST_AUTO_TEST_CASE(error_condition_true)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(action)
+
+BOOST_AUTO_TEST_CASE(no_action)
+{
+	[[maybe_unused]] bool invoked = false;
+
+	FAULT_INJECT_ACTION(test, simple, do { invoked = true; } while (false));
+
+	BOOST_CHECK(!invoked);
+}
+
+BOOST_AUTO_TEST_CASE(with_action)
+{
+	[[maybe_unused]] bool invoked = false;
+	avm::fault_injection::InjectionStateGuard guard(FAULT_INJECTION_POINT_REF(test, simple));
+
+	FAULT_INJECT_ACTION(test, simple, do { invoked = true; } while (false));
+
+	BOOST_CHECK(invoked);
+}
+
+BOOST_AUTO_TEST_SUITE_END()

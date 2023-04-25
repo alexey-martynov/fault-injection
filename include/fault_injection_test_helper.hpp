@@ -98,6 +98,10 @@ namespace avm::fault_injection
 			}
 		}
 
+		InjectionStateGuard(std::nullptr_t):
+			point_{nullptr}
+		{}
+
 		InjectionStateGuard(InjectionStateGuard &&) = delete;
 		InjectionStateGuard(const InjectionStateGuard &) = delete;
 		InjectionStateGuard & operator =(InjectionStateGuard &&) = delete;

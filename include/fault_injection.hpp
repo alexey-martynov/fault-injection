@@ -99,11 +99,19 @@ namespace avm::fault_injection
 		} \
 	} while (false)
 
+#define FAULT_INJECT_ACTION(space, name, action) do {	  \
+	if (::avm::fault_injection::isActive(FAULT_INJECTION_POINT_REF(space, name))) { \
+		static_cast<void>(FAULT_INJECTION_ONESHOT(space, name)); \
+		action; \
+	} \
+} while (false)
+
 #else
 
 #define FAULT_INJECT_ERROR_CODE_IF(space, name, condition, action) (action)
 #define FAULT_INJECT_ERRNO_IF_EX(space, name, condition, action, result) (action)
 #define FAULT_INJECT_EXCEPTION_IF(space, name, condition, exception)
+#define FAULT_INJECT_ACTION(space, name, action)
 
 #endif
 

@@ -9,6 +9,7 @@
 #include <stdexcept>
 
 #include <fault_injection.hpp>
+#include <fault_injection_test_helper.hpp>
 
 FAULT_INJECTION_POINT(test, point1);
 FAULT_INJECTION_POINT(test, point2);
@@ -191,6 +192,29 @@ BOOST_AUTO_TEST_CASE(error)
 	BOOST_CHECK_NO_THROW(FAULT_INJECT_EXCEPTION(test, point1, std::runtime_error("INJECTED")));
 
 	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(test, point1));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(disabled_action)
+
+BOOST_AUTO_TEST_CASE(no_action)
+{
+	bool invoked = false;
+
+	FAULT_INJECT_ACTION(test, point1, do { invoked = true } while (false));
+
+	BOOST_CHECK(!invoked);
+}
+
+BOOST_AUTO_TEST_CASE(with_action)
+{
+	bool invoked = false;
+	avm::fault_injection::InjectionStateGuard guard(FAULT_INJECTION_POINT_REF(test, point1));
+
+	FAULT_INJECT_ACTION(test, point1, do { invoked = true } while (false));
+
+	BOOST_CHECK(!invoked);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
