@@ -86,9 +86,19 @@ avm::fault_injection::point_t * avm::fault_injection::find(const char * space, c
 	return nullptr;
 }
 
+avm::fault_injection::points_collection::const_iterator avm::fault_injection::points_collection::begin() const
+{
+	return const_iterator{getModule()};
+}
+
 avm::fault_injection::points_collection::iterator avm::fault_injection::points_collection::begin()
 {
 	return iterator{getModule()};
+}
+
+avm::fault_injection::points_collection::const_iterator avm::fault_injection::points_collection::end() const
+{
+	return const_iterator{};
 }
 
 avm::fault_injection::points_collection::iterator avm::fault_injection::points_collection::end()

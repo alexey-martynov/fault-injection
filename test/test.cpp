@@ -38,6 +38,31 @@ BOOST_AUTO_TEST_CASE(foreach)
 		return (strcmp(point.space, "test2") == 0) && (strcmp(point.name, "another") == 0);
 	}) != points.end());
 }
+
+BOOST_AUTO_TEST_CASE(foreach_const)
+{
+	const auto points =  avm::fault_injection::points;
+
+	BOOST_CHECK_EQUAL(std::distance(points.begin(), points.end()), 3u);
+
+	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "simple") == 0);
+	}) != points.end());
+	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "second") == 0);
+	}) != points.end());
+	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(point.space, "test2") == 0) && (strcmp(point.name, "another") == 0);
+	}) != points.end());
+}
+
+BOOST_AUTO_TEST_CASE(const_from_mutable)
+{
+	using namespace avm::fault_injection;
+
+	points_collection::iterator mutable_iterator = avm::fault_injection::points.begin();
+	points_collection::const_iterator const_iterator(mutable_iterator);
+}
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(error_code)

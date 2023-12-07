@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <cassert>
 #include <iterator>
+#include <utility>
 
 namespace avm::fault_injection
 {
@@ -321,7 +322,103 @@ namespace avm::fault_injection
 			friend class points_collection;
 		};
 
+		class const_iterator
+		{
+		public:
+			using iterator_category = std::forward_iterator_tag;
+			using difference_type   = std::ptrdiff_t;
+			using value_type        = point_t;
+			using pointer           = const point_t *;
+			using reference         = const point_t &;
+
+			const_iterator(const iterator& rhs):
+				module_(rhs.module_),
+				ptr_(rhs.ptr_)
+			{}
+
+			const_iterator(iterator&& rhs):
+				module_(std::exchange(rhs.module_, nullptr)),
+				ptr_(std::exchange(rhs.ptr_, nullptr))
+			{}
+
+			reference operator *() const noexcept
+			{
+				assert(ptr_ != nullptr);
+
+				return **ptr_;
+			}
+
+			pointer operator ->() const noexcept
+			{
+				assert(ptr_ != nullptr);
+
+				return *ptr_;
+			}
+
+			const_iterator& operator ++()
+			{
+				do {
+					++ptr_;
+					if (ptr_ == module_->end) {
+						do {
+							module_ = module_->next;
+						} while ((module_ != nullptr) && (module_->begin == module_->end));
+
+						ptr_ = (module_ != nullptr) ? module_->begin : nullptr;
+					}
+				} while ((ptr_ != nullptr) && (*ptr_ == nullptr));
+
+				return *this;
+			}
+
+			const_iterator operator ++(int)
+			{
+				const_iterator result{*this};
+
+				++ptr_;
+
+				return result;
+			}
+
+			bool operator ==(const const_iterator& rhs) const
+			{
+				return (module_ == rhs.module_) && (ptr_ == rhs.ptr_);
+			}
+
+			bool operator !=(const const_iterator& rhs) const
+			{
+				return (module_ != rhs.module_) || (ptr_ != rhs.ptr_);
+			}
+
+		private:
+			detail::module_points_t * module_;
+			point_t ** ptr_;
+
+			const_iterator():
+				module_(nullptr),
+				ptr_(nullptr)
+			{}
+
+			const_iterator(detail::module_points_t * module):
+				module_(module)
+			{
+				while ((module_ != nullptr) && (module_->begin == module_->end)) {
+					module_ = module_->next;
+				}
+				ptr_ = (module_ != nullptr) ? module_->begin : nullptr;
+
+				if ((ptr_ != nullptr) && (*ptr_ == nullptr)) {
+					// Skip fake instance
+					++*this;
+				}
+			}
+
+			friend class points_collection;
+		};
+
+		const_iterator begin() const;
 		iterator begin();
+		const_iterator end() const;
 		iterator end();
 	};
 
