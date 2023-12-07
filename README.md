@@ -169,7 +169,7 @@ macros:
   
 All defined injection points are turned off by default.
 
-> NOTE: all these macros should be used outside any namespace!
+> NOTE: all macros above should be used outside any namespace at global scope!
 
 `FAULT_INJECTION_POINT_REF(space, name)`
 : constructs global symbol name for point with `space` and `name`
