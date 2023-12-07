@@ -11,9 +11,9 @@
 #include <fault_injection.hpp>
 #include <fault_injection_test_helper.hpp>
 
-FAULT_INJECTION_POINT(test, simple);
-FAULT_INJECTION_POINT(test, second);
-FAULT_INJECTION_POINT(test2, another);
+FAULT_INJECTION_POINT(test, simple, "Simple fault");
+FAULT_INJECTION_POINT(test, second, "Second fault");
+FAULT_INJECTION_POINT_EX(test2, another, "Another", 0);
 
 static bool isInjected(const std::exception & e)
 {

@@ -11,8 +11,8 @@
 #include <fault_injection.hpp>
 #include <fault_injection_test_helper.hpp>
 
-FAULT_INJECTION_POINT(test, point1);
-FAULT_INJECTION_POINT(test, point2);
+FAULT_INJECTION_POINT(test, point1, "Point 1");
+FAULT_INJECTION_POINT(test, point2, "Point 2");
 
 void executeWithInjection();
 

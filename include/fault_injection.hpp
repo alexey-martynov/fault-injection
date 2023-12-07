@@ -29,6 +29,7 @@ namespace avm::fault_injection
 	{
 		const char * const space;
 		const char * const name;
+		const char * const description;
 #if FAULT_INJECTION_HAS_THREADS > 0
 		std::atomic<int> error_code;
 		std::atomic<bool> active;
@@ -57,15 +58,15 @@ namespace avm::fault_injection
 #define FAULT_INJECTION_POINT_REF(space, name) ::space::fault_injection_point_##name
 
 #if defined(__APPLE__)
-#define FAULT_INJECTION_POINT_EX(space, name, error_code)	  \
+#define FAULT_INJECTION_POINT_EX(space, name, description, error_code)	  \
 	namespace space { \
-		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { #space, #name, error_code, false, ::avm::fault_injection::mode_t::multiple }; \
+		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { #space, #name, description, error_code, false, ::avm::fault_injection::mode_t::multiple }; \
 		static ::avm::fault_injection::point_t * fault_injection_point_##name##_ptr __attribute__((used,section("__DATA,__faults"))) = &FAULT_INJECTION_POINT_REF(space, name); \
 	}
 #elif defined(__linux__)
-#define FAULT_INJECTION_POINT_EX(space, name, error_code)	  \
+#define FAULT_INJECTION_POINT_EX(space, name, description, error_code)	  \
 	namespace space { \
-		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { #space, #name, error_code, false, ::avm::fault_injection::mode_t::multiple }; \
+		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { #space, #name, description, error_code, false, ::avm::fault_injection::mode_t::multiple }; \
 		static ::avm::fault_injection::point_t * fault_injection_point_##name##_ptr __attribute__((used,section("__faults"))) = &FAULT_INJECTION_POINT_REF(space, name); \
 	}
 #else
@@ -75,11 +76,11 @@ namespace avm::fault_injection
 #else
 
 #define FAULT_INJECTION_POINT_REF(space, name) nullptr
-#define FAULT_INJECTION_POINT_EX(space, name, error_code)
+#define FAULT_INJECTION_POINT_EX(space, name, description, error_code)
 
 #endif
 
-#define FAULT_INJECTION_POINT(space, name)	FAULT_INJECTION_POINT_EX(space, name, 0)
+#define FAULT_INJECTION_POINT(space, name, description)	FAULT_INJECTION_POINT_EX(space, name, description, 0)
 
 #if FAULT_INJECTIONS_ENABLED > 0
 

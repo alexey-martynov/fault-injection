@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-FAULT_INJECTION_POINT(lib, point1);
+FAULT_INJECTION_POINT(lib, point1, "Library Point 1");
 
 void executeWithInjection()
 {
