@@ -63,6 +63,18 @@ BOOST_AUTO_TEST_CASE(const_from_mutable)
 	points_collection::iterator mutable_iterator = avm::fault_injection::points.begin();
 	points_collection::const_iterator const_iterator(mutable_iterator);
 }
+
+BOOST_AUTO_TEST_CASE(move_beyond_the_end)
+{
+	using namespace avm::fault_injection;
+
+	auto it = points.end();
+
+	++it;
+
+	BOOST_CHECK(it == points.end());
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(error_code)

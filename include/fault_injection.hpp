@@ -385,6 +385,10 @@ namespace avm::fault_injection
 
 			iterator& operator ++()
 			{
+				if (ptr_ == nullptr) {
+					return *this;
+				}
+
 				do {
 					++ptr_;
 					if (ptr_ == module_->end) {
@@ -479,6 +483,10 @@ namespace avm::fault_injection
 
 			const_iterator& operator ++()
 			{
+				if (ptr_ == nullptr) {
+					return *this;
+				}
+
 				do {
 					++ptr_;
 					if (ptr_ == module_->end) {

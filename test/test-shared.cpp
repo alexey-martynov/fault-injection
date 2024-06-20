@@ -100,6 +100,18 @@ BOOST_AUTO_TEST_CASE(foreach)
 		  return (strcmp(getSpace(point), "lib") == 0) && (strcmp(getName(point), "point_v0") == 0);
 	  }) != points.end());
 }
+
+BOOST_AUTO_TEST_CASE(move_beyond_the_end)
+{
+	using namespace avm::fault_injection;
+
+	auto it = points.end();
+
+	++it;
+
+	BOOST_CHECK(it == points.end());
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 
 BOOST_AUTO_TEST_SUITE(error_code)
