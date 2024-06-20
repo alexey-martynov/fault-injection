@@ -22,6 +22,58 @@ static bool isInjected(const std::exception & e)
 
 BOOST_AUTO_TEST_SUITE(dynamiclib)
 
+BOOST_AUTO_TEST_CASE(iterate_preincrement)
+{
+	using avm::fault_injection::points;
+
+	auto find_preincrement = [](auto begin, auto end, auto predicate) {
+		while (begin != end) {
+			if (predicate(*begin)) {
+				break;
+			}
+			++begin;
+		}
+
+		return begin;
+	};
+
+	BOOST_CHECK(find_preincrement(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "point1") == 0);
+	}) != points.end());
+	BOOST_CHECK(find_preincrement(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "point2") == 0);
+	}) != points.end());
+	BOOST_CHECK(find_preincrement(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(point.space, "lib") == 0) && (strcmp(point.name, "point1") == 0);
+	}) != points.end());
+}
+
+BOOST_AUTO_TEST_CASE(iterate_postincrement)
+{
+	using avm::fault_injection::points;
+
+	auto find_postincrement = [](auto begin, auto end, auto predicate) {
+		while (begin != end) {
+			if (predicate(*begin)) {
+				break;
+			}
+			begin++;
+		}
+
+		return begin;
+	};
+
+	BOOST_CHECK(find_postincrement(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "point1") == 0);
+	}) != points.end());
+	BOOST_CHECK(find_postincrement(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "point2") == 0);
+	}) != points.end());
+	BOOST_CHECK(find_postincrement(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(point.space, "lib") == 0) && (strcmp(point.name, "point1") == 0);
+	}) != points.end());
+}
+
 BOOST_AUTO_TEST_CASE(foreach)
 {
 	  using avm::fault_injection::points;

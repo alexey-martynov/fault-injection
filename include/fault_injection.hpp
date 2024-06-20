@@ -282,7 +282,7 @@ namespace avm::fault_injection
 			{
 				iterator result{*this};
 
-				++ptr_;
+				++*this;
 
 				return result;
 			}
@@ -376,7 +376,7 @@ namespace avm::fault_injection
 			{
 				const_iterator result{*this};
 
-				++ptr_;
+				++*this;
 
 				return result;
 			}
