@@ -14,6 +14,7 @@ FAULT_INJECTION_POINT(test, point1, "Point 1");
 FAULT_INJECTION_POINT(test, point2, "Point 2");
 
 void executeWithInjection();
+void executeV0WithInjection();
 
 static bool isInjected(const std::exception & e)
 {
@@ -38,13 +39,16 @@ BOOST_AUTO_TEST_CASE(iterate_preincrement)
 	};
 
 	BOOST_CHECK(find_preincrement(points.begin(), points.end(), [](const auto & point) {
-		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "point1") == 0);
+		return (strcmp(getSpace(point), "test") == 0) && (strcmp(getName(point), "point1") == 0);
 	}) != points.end());
 	BOOST_CHECK(find_preincrement(points.begin(), points.end(), [](const auto & point) {
-		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "point2") == 0);
+		return (strcmp(getSpace(point), "test") == 0) && (strcmp(getName(point), "point2") == 0);
 	}) != points.end());
 	BOOST_CHECK(find_preincrement(points.begin(), points.end(), [](const auto & point) {
-		return (strcmp(point.space, "lib") == 0) && (strcmp(point.name, "point1") == 0);
+		return (strcmp(getSpace(point), "lib") == 0) && (strcmp(getName(point), "point1") == 0);
+	}) != points.end());
+	BOOST_CHECK(find_preincrement(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(getSpace(point), "lib") == 0) && (strcmp(getName(point), "point_v0") == 0);
 	}) != points.end());
 }
 
@@ -64,13 +68,16 @@ BOOST_AUTO_TEST_CASE(iterate_postincrement)
 	};
 
 	BOOST_CHECK(find_postincrement(points.begin(), points.end(), [](const auto & point) {
-		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "point1") == 0);
+		return (strcmp(getSpace(point), "test") == 0) && (strcmp(getName(point), "point1") == 0);
 	}) != points.end());
 	BOOST_CHECK(find_postincrement(points.begin(), points.end(), [](const auto & point) {
-		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "point2") == 0);
+		return (strcmp(getSpace(point), "test") == 0) && (strcmp(getName(point), "point2") == 0);
 	}) != points.end());
 	BOOST_CHECK(find_postincrement(points.begin(), points.end(), [](const auto & point) {
-		return (strcmp(point.space, "lib") == 0) && (strcmp(point.name, "point1") == 0);
+		return (strcmp(getSpace(point), "lib") == 0) && (strcmp(getName(point), "point1") == 0);
+	}) != points.end());
+	BOOST_CHECK(find_postincrement(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(getSpace(point), "lib") == 0) && (strcmp(getName(point), "point_v0") == 0);
 	}) != points.end());
 }
 
@@ -78,16 +85,19 @@ BOOST_AUTO_TEST_CASE(foreach)
 {
 	  using avm::fault_injection::points;
 
-	  BOOST_CHECK_EQUAL(std::distance(points.begin(), points.end()), 3u);
+	  BOOST_CHECK_EQUAL(std::distance(points.begin(), points.end()), 4u);
 
 	  BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
-	  return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "point1") == 0);
+		  return (strcmp(getSpace(point), "test") == 0) && (strcmp(getName(point), "point1") == 0);
 	  }) != points.end());
 	  BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
-	  return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "point2") == 0);
+		  return (strcmp(getSpace(point), "test") == 0) && (strcmp(getName(point), "point2") == 0);
 	  }) != points.end());
 	  BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
-	  return (strcmp(point.space, "lib") == 0) && (strcmp(point.name, "point1") == 0);
+		  return (strcmp(getSpace(point), "lib") == 0) && (strcmp(getName(point), "point1") == 0);
+	  }) != points.end());
+	  BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
+		  return (strcmp(getSpace(point), "lib") == 0) && (strcmp(getName(point), "point_v0") == 0);
 	  }) != points.end());
 }
 BOOST_AUTO_TEST_SUITE_END()
@@ -258,6 +268,11 @@ BOOST_AUTO_TEST_CASE(no_error)
 	BOOST_CHECK_NO_THROW(executeWithInjection());
 }
 
+BOOST_AUTO_TEST_CASE(no_error_v0)
+{
+	BOOST_CHECK_NO_THROW(executeV0WithInjection());
+}
+
 BOOST_AUTO_TEST_CASE(error)
 {
 	avm::fault_injection::activate("lib", "point1");
@@ -265,6 +280,15 @@ BOOST_AUTO_TEST_CASE(error)
 	BOOST_CHECK_EXCEPTION(executeWithInjection(), std::runtime_error, isInjected);
 
 	avm::fault_injection::deactivate("lib", "point1");
+}
+
+BOOST_AUTO_TEST_CASE(error_v0)
+{
+	avm::fault_injection::activate("lib", "point_v0");
+
+	BOOST_CHECK_EXCEPTION(executeV0WithInjection(), std::runtime_error, isInjected);
+
+	avm::fault_injection::deactivate("lib", "point_v0");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

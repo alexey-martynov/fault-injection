@@ -24,12 +24,12 @@ This library provides simple fault injection support. Its benefits:
 
 * Enumerating injection points and controlling their status to
   implement external control.
-  
+
 * Thread support can be turned off.
-  
+
 * The custom build scripts and translation units with many includes
   are not required.
-  
+
 Platforms
 ---------
 
@@ -120,7 +120,9 @@ Release-Acquire ordering.
 To have safe access to injection point data 2 macros are added:
 `FAULT_INJECT_READ(var)` and `FAULT_INJECT_WRITE(var, value)`. These
 macros use Release-Acquire ordering when thread support is turned on
-and direct access when it is turned off.
+and direct access when it is turned off. Please don't use them in
+client code to maintain backward compatibility. The accessors in API
+should be used instead.
 
 The thread support is turned on by default and it can be turned of by
 defining `FAULT_INJECTION_HAS_THREADS` to 0.
@@ -132,16 +134,11 @@ All code except macros is placed to namespace `avm::fault_injection`.
 
 ### Define Injection Point
 
-An injection point is represented with the following structure:
+An injection point is represented with the structure `point_t` and has
+the following properties:
 
-``` c++
-struct point_t {
-    const char * space;
-    const char * name;
-    int error_code;
-    bool active;
-};
-```
+`version`
+: a version of the structure used for backward compatibility
 
 `space`
 : namespace of point
@@ -149,12 +146,18 @@ struct point_t {
 `name`
 : name of point
 
+`description`
+: a verbose description of point
+
 `error_code`
 : the error code returned when injection point is active and has type
   or "error code" or "`errno`"
-  
+
 `active`
 : controls whether point is active or not
+
+Direct access to that properties breaks backward compatibility. The
+accessor functions should be used to obtain information about point.
 
 Instances of injection points should created with the following
 macros:
@@ -162,11 +165,11 @@ macros:
 `FAULT_INJECTION_POINT(space, name)`
 : define fault injection point with `space` and `name`, the
   `error_code` will be 0.
-  
+
 `FAULT_INJECTION_POINT_EX(space, name, error_code)`
 : define fault injection point with `space`, `name` and default
   `error_code`.
-  
+
 All defined injection points are turned off by default.
 
 > NOTE: all macros above should be used outside any namespace at global scope!
@@ -174,8 +177,16 @@ All defined injection points are turned off by default.
 `FAULT_INJECTION_POINT_REF(space, name)`
 : constructs global symbol name for point with `space` and `name`
   allowing to direct access to the point definition.
-  
+
+  > NOTE: Do not use this macros outside shared object which defines
+  > injection point. This will break compilation or One Definition
+  > Rule when shared object is built with another version of library.
+
 ### Injecting
+
+> NOTE: Do not use these macros outside shared object which defines
+> injection point. This will break compilation or One Definition
+> Rule when shared object is built with another version of library.
 
 The fault can be injected via one of the following macros.
 
@@ -183,12 +194,12 @@ The fault can be injected via one of the following macros.
 : when inactive execute `action` (it is expected to return `int`),
   when active doesn't execute `action` but return `error_code` from
   point definition directly.
-  
+
 `FAULT_INJECT_ERRNO(space, name, action)`
 : when inactive execute `action` and return its result (it is expected
   to return `int`), when active return -1 and set `errno` to the
   `error_code` from point definition.
-  
+
 `FAULT_INJECT_ERRNO_EX(space, name, action, result)`
 : when inactive execute `action` and return its result, when active
   return `result` and set `errno` to the `error_code` from point
@@ -243,6 +254,10 @@ of defined points.
 `find("space", "name")`
 : lookup injection point by `space` and `name`, return pointer to
   point definition or `nullptr` in case when it is not found.
+
+> WARNING: do not use access macros (`FAULT_INJECTION_READ` and
+> `FAULT_INJECTION_WRITE`) to maintain backward compatibility of
+> client code.
 
 ### Listing
 

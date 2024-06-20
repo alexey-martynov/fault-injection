@@ -29,30 +29,30 @@ BOOST_AUTO_TEST_CASE(foreach)
 	BOOST_CHECK_EQUAL(std::distance(points.begin(), points.end()), 3u);
 
 	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
-		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "simple") == 0);
+		return (strcmp(getSpace(point), "test") == 0) && (strcmp(getName(point), "simple") == 0);
 	}) != points.end());
 	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
-		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "second") == 0);
+		return (strcmp(getSpace(point), "test") == 0) && (strcmp(getName(point), "second") == 0);
 	}) != points.end());
 	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
-		return (strcmp(point.space, "test2") == 0) && (strcmp(point.name, "another") == 0);
+		return (strcmp(getSpace(point), "test2") == 0) && (strcmp(getName(point), "another") == 0);
 	}) != points.end());
 }
 
 BOOST_AUTO_TEST_CASE(foreach_const)
 {
-	const auto points =  avm::fault_injection::points;
+	const auto points = avm::fault_injection::points;
 
 	BOOST_CHECK_EQUAL(std::distance(points.begin(), points.end()), 3u);
 
 	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
-		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "simple") == 0);
+		return (strcmp(getSpace(point), "test") == 0) && (strcmp(getName(point), "simple") == 0);
 	}) != points.end());
 	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
-		return (strcmp(point.space, "test") == 0) && (strcmp(point.name, "second") == 0);
+		return (strcmp(getSpace(point), "test") == 0) && (strcmp(getName(point), "second") == 0);
 	}) != points.end());
 	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
-		return (strcmp(point.space, "test2") == 0) && (strcmp(point.name, "another") == 0);
+		return (strcmp(getSpace(point), "test2") == 0) && (strcmp(getName(point), "another") == 0);
 	}) != points.end());
 }
 

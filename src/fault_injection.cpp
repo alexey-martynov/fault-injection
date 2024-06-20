@@ -76,7 +76,7 @@ namespace avm::fault_injection
 avm::fault_injection::point_t * avm::fault_injection::find(const char * space, const char * name)
 {
 	auto item = std::find_if(points.begin(), points.end(), [space, name](point_t & point) {
-		return (strcmp(point.space, space) == 0) && (strcmp(point.name, name) == 0);
+		return (strcmp(getSpace(point), space) == 0) && (strcmp(getName(point), name) == 0);
 	});
 
 	if (item != points.end()) {
