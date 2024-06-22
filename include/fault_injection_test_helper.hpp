@@ -12,38 +12,36 @@ namespace avm::fault_injection
 	public:
 		InjectionStateGuard(point_t & point):
 			point_{&point},
-			reset_state_{!FAULT_INJECTION_READ(point.active)}
+			reset_state_{!isActive(point)}
 		{
-			FAULT_INJECTION_WRITE(point.active, true);
+			activate(point, getMode(point));
 		}
 
 		InjectionStateGuard(point_t & point, mode_t mode):
 			point_{&point},
-			reset_state_{!FAULT_INJECTION_READ(point.active)},
-			old_mode_{FAULT_INJECTION_READ(point.mode)}
+			reset_state_{!isActive(point)},
+			old_mode_{getMode(point)}
 		{
-			FAULT_INJECTION_WRITE(point.mode, mode);
-			FAULT_INJECTION_WRITE(point.active, true);
+			activate(point, mode);
 		}
 
 		InjectionStateGuard(point_t & point, int error):
 			point_{&point},
-			reset_state_{!FAULT_INJECTION_READ(point.active)},
-			old_error_{FAULT_INJECTION_READ(point.error_code)}
+			reset_state_{!isActive(point)},
+			old_error_{getErrorCode(point)}
 		{
-			FAULT_INJECTION_WRITE(point.error_code, error);
-			FAULT_INJECTION_WRITE(point.active, true);
+			setErrorCode(point, error);
+			activate(point, getMode(point));
 		}
 
 		InjectionStateGuard(point_t & point, mode_t mode, int error):
 			point_{&point},
-			reset_state_{!FAULT_INJECTION_READ(point.active)},
-			old_mode_{FAULT_INJECTION_READ(point.mode)},
-			old_error_{FAULT_INJECTION_READ(point.error_code)}
+			reset_state_{!isActive(point)},
+			old_mode_{getMode(point)},
+			old_error_{getErrorCode(point)}
 		{
-			FAULT_INJECTION_WRITE(point.mode, mode);
-			FAULT_INJECTION_WRITE(point.error_code, error);
-			FAULT_INJECTION_WRITE(point.active, true);
+			setErrorCode(point, error);
+			activate(point, mode);
 		}
 
 		InjectionStateGuard(const char * space, const char * name):
@@ -51,9 +49,9 @@ namespace avm::fault_injection
 			reset_state_{false}
 		{
 			if (point_ != nullptr) {
-				reset_state_ = !FAULT_INJECTION_READ(point_->active);
+				reset_state_ = !isActive(*point_);
 
-				FAULT_INJECTION_WRITE(point_->active, true);
+				activate(*point_, getMode(*point_));
 			}
 		}
 
@@ -62,11 +60,10 @@ namespace avm::fault_injection
 			reset_state_{false}
 		{
 			if (point_ != nullptr) {
-				reset_state_ = !FAULT_INJECTION_READ(point_->active);
-				old_mode_ = FAULT_INJECTION_READ(point_->mode);
+				reset_state_ = !isActive(*point_);
+				old_mode_ = getMode(*point_);
 
-				FAULT_INJECTION_WRITE(point_->mode, mode);
-				FAULT_INJECTION_WRITE(point_->active, true);
+				activate(*point_, mode);
 			}
 		}
 
@@ -75,11 +72,11 @@ namespace avm::fault_injection
 			reset_state_{false}
 		{
 			if (point_ != nullptr) {
-				reset_state_ = !FAULT_INJECTION_READ(point_->active);
-				old_error_ = FAULT_INJECTION_READ(point_->error_code);
+				reset_state_ = !isActive(*point_);
+				old_error_ = getErrorCode(*point_);
 
-				FAULT_INJECTION_WRITE(point_->error_code, error);
-				FAULT_INJECTION_WRITE(point_->active, true);
+				setErrorCode(*point_, error);
+				activate(*point_, getMode(*point_));
 			}
 		}
 
@@ -88,13 +85,12 @@ namespace avm::fault_injection
 			reset_state_{false}
 		{
 			if (point_ != nullptr) {
-				reset_state_ = !FAULT_INJECTION_READ(point_->active);
-				old_mode_ = FAULT_INJECTION_READ(point_->mode);
-				old_error_ = FAULT_INJECTION_READ(point_->error_code);
+				reset_state_ = !isActive(*point_);
+				old_mode_ = getMode(*point_);
+				old_error_ = getErrorCode(*point_);
 
-				FAULT_INJECTION_WRITE(point_->mode, mode);
-				FAULT_INJECTION_WRITE(point_->error_code, error);
-				FAULT_INJECTION_WRITE(point_->active, true);
+				setErrorCode(*point_, error);
+				activate(*point_, mode);
 			}
 		}
 
@@ -111,13 +107,13 @@ namespace avm::fault_injection
 		{
 			if (point_ != nullptr) {
 				if (old_error_) {
-					FAULT_INJECTION_WRITE(point_->error_code, *old_error_);
+					setErrorCode(*point_, *old_error_);
 				}
 				if (old_mode_) {
-					FAULT_INJECTION_WRITE(point_->mode, *old_mode_);
+					setMode(*point_, *old_mode_);
 				}
 				if (reset_state_) {
-					FAULT_INJECTION_WRITE(point_->active, false);
+					deactivate(*point_);
 				}
 			}
 		}
