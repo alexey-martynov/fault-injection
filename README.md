@@ -127,6 +127,39 @@ should be used instead.
 The thread support is turned on by default and it can be turned of by
 defining `FAULT_INJECTION_HAS_THREADS` to 0.
 
+> NOTE: The shared objects built with library version prior to 0.3 are
+> compatible only with main program and other shared objects built
+> with the same thread support mode. Mixing thread support mode in
+> such configurations leads to Undefined Behavior due to One
+> Definition Rule violation.
+
+> NOTE: Since version 0.3 the point definition no longer depends on
+> thread support mode. But fault injection compiled without thread
+> support requires "acquire" memory barrier to observe changes by
+> other threads. And changing point state, error code and mode from
+> module without thread support needs "release" memory barrier to
+> allow other threads to observe changes. Turning on thread support
+> provides these barriers automatically. Without thread support these
+> barriers should be provided by client code.
+
+Shared Object Support
+---------------------
+
+The library supports joining fault injection tables from multiple
+shared objects to a single collection. To add shared object's points
+to global collection the `registerModule()` function should be called.
+
+The library tries to do this automatically by providing module
+constructor. But this function provided via static library is
+eliminated by linker very often so it would be wise to provide library
+constructor by client code and call `registerModule()` inside.
+
+To support configurations without fault injection support the macros
+`FAULT_INJECTION_REGISTER_MODULE()` is provided. When fault injection
+support is turned on it expands to `registerModule()` call. Without
+fault injection it expands to nothing eliminating dependency on
+library.
+
 API
 ---
 
