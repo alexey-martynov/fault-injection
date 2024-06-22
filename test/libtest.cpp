@@ -38,3 +38,9 @@ void executeV0WithInjection()
 		throw std::runtime_error("INJECTED");
 	}
 }
+
+__attribute__((used,constructor))
+static void init()
+{
+	FAULT_INJECTION_REGISTER_MODULE();
+}

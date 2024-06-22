@@ -100,10 +100,14 @@ namespace avm::fault_injection
 #error "Unsupported platform"
 #endif
 
+#define FAULT_INJECTION_REGISTER_MODULE() ::avm::fault_injection::registerModule()
+
 #else
 
 #define FAULT_INJECTION_POINT_REF(space, name) nullptr
 #define FAULT_INJECTION_POINT_EX(space, name, description, error_code)
+
+#define FAULT_INJECTION_REGISTER_MODULE()
 
 #endif
 
