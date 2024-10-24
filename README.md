@@ -195,11 +195,11 @@ accessor functions should be used to obtain information about point.
 Instances of injection points should created with the following
 macros:
 
-`FAULT_INJECTION_POINT(space, name)`
+`FAULT_INJECTION_POINT(space, name, description)`
 : define fault injection point with `space` and `name`, the
   `error_code` will be 0.
 
-`FAULT_INJECTION_POINT_EX(space, name, error_code)`
+`FAULT_INJECTION_POINT_EX(space, name, description, error_code)`
 : define fault injection point with `space`, `name` and default
   `error_code`.
 
