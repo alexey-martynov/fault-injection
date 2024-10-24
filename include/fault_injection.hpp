@@ -81,6 +81,9 @@ namespace avm::fault_injection
 
 #if (FAULT_INJECTIONS_ENABLED > 0) || (FAULT_INJECTIONS_DEFINITIONS > 0)
 
+#define DECLARE_FAULT_INJECTION_POINT(space, name) namespace space {	  \
+	extern ::avm::fault_injection::point_t fault_injection_point_##name; \
+	}
 #define FAULT_INJECTION_POINT_REF(space, name) ::space::fault_injection_point_##name
 
 #if defined(__APPLE__)
@@ -104,6 +107,7 @@ namespace avm::fault_injection
 #else
 
 #define FAULT_INJECTION_POINT_REF(space, name) nullptr
+#define DECLARE_FAULT_INJECTION_POINT(space, name)
 #define FAULT_INJECTION_POINT_EX(space, name, description, error_code)
 
 #define FAULT_INJECTION_REGISTER_MODULE()

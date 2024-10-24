@@ -215,6 +215,10 @@ All defined injection points are turned off by default.
   > injection point. This will break compilation or One Definition
   > Rule when shared object is built with another version of library.
 
+`DECLARE_FAULT_INJECTION_POINT(space, name)`
+: declares global symbol name for point with `space` and `name`
+  allowing its usage from another translation unit.
+
 ### Injecting
 
 > NOTE: Do not use these macros outside shared object which defines
