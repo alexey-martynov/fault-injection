@@ -247,7 +247,7 @@ The fault can be injected via one of the following macros.
 
   Requires semicolon after.
 
-`FAULT_INJECT_ACTION(space, name, exception)`
+`FAULT_INJECT_ACTION(space, name, action)`
 : when inactive does nothing, when active performs `action`. `action`
   can be a complex statement by using `do { ... } while (false)`
   construct.
