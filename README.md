@@ -30,6 +30,9 @@ This library provides simple fault injection support. Its benefits:
 * The custom build scripts and translation units with many includes
   are not required.
 
+* Injection point can have a hook which is called when point is
+  activated or deactivated.
+
 Platforms
 ---------
 
@@ -203,6 +206,13 @@ macros:
 : define fault injection point with `space`, `name` and default
   `error_code`.
 
+`FAULT_INJECTION_POINT_HOOK(space, name, description, error_code, hook)`
+: define fault injection point with `space`, `name` and default
+  `error_code` and state hook `hook`. The state hook is a pointer to
+  function which accepts reference to `avm::fault_injection::point_t`
+  and returns nothing. It is called every time when `activate()` or
+  `deactivate()` is called for corresponding point.
+
 All defined injection points are turned off by default.
 
 > NOTE: all macros above should be used outside any namespace at global scope!
@@ -312,3 +322,33 @@ error code. If point has been inactive at the time of guard
 construction it will be deactivated back upon destruction of
 guard. The specified mode and error code will be set to point on
 construction and returned back to previous values on destruction.
+
+### Backward compatibility note
+
+> GENERAL RULE: use API functions to manipulate fault injection
+> points. The API properly handles all versions. Never access
+> structure members directly.
+
+The library is designed to be backward compatible as much as
+possible. This leads to following aspects:
+
+* The every translation unit tries to define the points as the latest
+  support version. Although it is possible to defined v0 point
+  directly it is not recommended (but used in tests). The points with
+  versions starting from v1 and below the current version can't be
+  properly defined.
+
+* The mix of different point versions can be got by linking libraries
+  built with previous versions of libraries.
+
+* The library functions described above properly handle all known
+  versions. But direct access to fault injection point can lead to
+  various issues including compilation errors and going out of buffer
+  bounds.
+
+* To have concise API the `FAULT_INJECTION_POINT_REF` always returns
+  reference to the `avm::fault_injection::point_t` regardless of
+  actual type. This means that v0 point type is forcibly cast to the
+  latest type and direct access to its members doesn't give proper
+  data and may lead to going out of bounds. Use API functions to
+  access data.

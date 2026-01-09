@@ -17,6 +17,46 @@ FAULT_INJECTION_POINT(test, simple, "Simple fault");
 FAULT_INJECTION_POINT(test, second, "Second fault");
 FAULT_INJECTION_POINT_EX(test2, another, "Another", 0);
 
+// Special v0 point for testing
+#if defined(__APPLE__)
+namespace compat {
+	::avm::fault_injection::v0::point_t fault_injection_point_v0_point __attribute__((used)) = {
+		"compat",
+		"v0_point",
+		"v0 compatibility check point",
+		0,
+		false,
+		::avm::fault_injection::mode_t::multiple
+	};
+
+	static ::avm::fault_injection::v0::point_t * fault_injection_point_v0_point_ptr __attribute__((used,section("__DATA,__faults"))) = &fault_injection_point_v0_point;
+}
+#elif defined(__linux__)
+namespace compat {
+	::avm::fault_injection::v0::point_t fault_injection_point_v0_point __attribute__((used)) = {
+		"compat",
+		"v0_point",
+		"v0 compatibility point",
+		0,
+		false,
+		::avm::fault_injection::mode_t::multiple
+	};
+
+	static ::avm::fault_injection::v0::point_t * fault_injection_point_v0_point_ptr __attribute__((used,section("__faults"))) = &fault_injection_point_v0_point;
+}
+#else
+#error "Unsupported platform"
+#endif
+
+static bool state_change_called = false;
+
+static void onStateChanged(avm::fault_injection::point_t &)
+{
+	state_change_called = true;
+}
+
+FAULT_INJECTION_POINT_HOOK(test2, hooked, "Hooked", 0, onStateChanged);
+
 static bool isInjected(const std::exception & e)
 {
 	return std::strcmp(e.what(), "INJECTED") == 0;
@@ -28,7 +68,7 @@ BOOST_AUTO_TEST_CASE(foreach)
 {
 	using avm::fault_injection::points;
 
-	BOOST_CHECK_EQUAL(std::distance(points.begin(), points.end()), 3u);
+	BOOST_CHECK_EQUAL(std::distance(points.begin(), points.end()), 5u);
 
 	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
 		return (strcmp(getSpace(point), "test") == 0) && (strcmp(getName(point), "simple") == 0);
@@ -38,6 +78,12 @@ BOOST_AUTO_TEST_CASE(foreach)
 	}) != points.end());
 	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
 		return (strcmp(getSpace(point), "test2") == 0) && (strcmp(getName(point), "another") == 0);
+	}) != points.end());
+	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(getSpace(point), "test2") == 0) && (strcmp(getName(point), "hooked") == 0);
+	}) != points.end());
+	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(getSpace(point), "compat") == 0) && (strcmp(getName(point), "v0_point") == 0);
 	}) != points.end());
 }
 
@@ -45,7 +91,7 @@ BOOST_AUTO_TEST_CASE(foreach_const)
 {
 	const auto points = avm::fault_injection::points;
 
-	BOOST_CHECK_EQUAL(std::distance(points.begin(), points.end()), 3u);
+	BOOST_CHECK_EQUAL(std::distance(points.begin(), points.end()), 5u);
 
 	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
 		return (strcmp(getSpace(point), "test") == 0) && (strcmp(getName(point), "simple") == 0);
@@ -55,6 +101,12 @@ BOOST_AUTO_TEST_CASE(foreach_const)
 	}) != points.end());
 	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
 		return (strcmp(getSpace(point), "test2") == 0) && (strcmp(getName(point), "another") == 0);
+	}) != points.end());
+	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(getSpace(point), "test2") == 0) && (strcmp(getName(point), "hooked") == 0);
+	}) != points.end());
+	BOOST_CHECK(std::find_if(points.begin(), points.end(), [](const auto & point) {
+		return (strcmp(getSpace(point), "compat") == 0) && (strcmp(getName(point), "v0_point") == 0);
 	}) != points.end());
 }
 
@@ -523,6 +575,118 @@ BOOST_AUTO_TEST_CASE(with_action)
 	FAULT_INJECT_ACTION(test, simple, do { invoked = true; } while (false));
 
 	BOOST_CHECK(invoked);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(hooks)
+
+BOOST_AUTO_TEST_CASE(state_change)
+{
+	state_change_called = false;
+
+	{
+		avm::fault_injection::InjectionStateGuard guard(FAULT_INJECTION_POINT_REF(test2, hooked));
+
+		BOOST_CHECK(state_change_called);
+
+		state_change_called = false;
+	}
+	BOOST_CHECK(state_change_called);
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_SUITE(compat_v0)
+
+BOOST_AUTO_TEST_CASE(no_error)
+{
+	const int value = FAULT_INJECT_ERROR_CODE(compat, v0_point, 15);
+
+	BOOST_CHECK_EQUAL(value, 15);
+}
+
+BOOST_AUTO_TEST_CASE(error_default)
+{
+	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(compat, v0_point));
+
+	const int value = FAULT_INJECT_ERROR_CODE(compat, v0_point, 15);
+
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(compat, v0_point));
+
+	BOOST_CHECK_EQUAL(value, 0);
+}
+
+BOOST_AUTO_TEST_CASE(error_custom)
+{
+	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(compat, v0_point));
+	avm::fault_injection::setErrorCode(FAULT_INJECTION_POINT_REF(compat, v0_point), -10);
+
+	const int value = FAULT_INJECT_ERROR_CODE(compat, v0_point, 15);
+
+	avm::fault_injection::setErrorCode(FAULT_INJECTION_POINT_REF(compat, v0_point));
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(compat, v0_point));
+
+	BOOST_CHECK_EQUAL(value, -10);
+}
+
+BOOST_AUTO_TEST_CASE(error_custom_by_name)
+{
+	avm::fault_injection::activate("compat", "v0_point");
+	avm::fault_injection::setErrorCode("compat", "v0_point", -10);
+
+	const int value = FAULT_INJECT_ERROR_CODE(compat, v0_point, 15);
+
+	avm::fault_injection::setErrorCode("compat", "v0_point");
+	avm::fault_injection::deactivate("compat", "v0_point");
+
+	BOOST_CHECK_EQUAL(value, -10);
+}
+
+BOOST_AUTO_TEST_CASE(error_multiple)
+{
+	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(compat, v0_point), avm::fault_injection::mode_t::multiple);
+
+	const int value1 = FAULT_INJECT_ERROR_CODE(compat, v0_point, 15);
+	const int value2 = FAULT_INJECT_ERROR_CODE(compat, v0_point, 16);
+
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(compat, v0_point));
+
+	BOOST_CHECK_EQUAL(value1, 0);
+	BOOST_CHECK_EQUAL(value2, 0);
+}
+
+BOOST_AUTO_TEST_CASE(error_oneshot)
+{
+	avm::fault_injection::activate(FAULT_INJECTION_POINT_REF(compat, v0_point), avm::fault_injection::mode_t::oneshot);
+
+	const int value1 = FAULT_INJECT_ERROR_CODE(compat, v0_point, 15);
+	const int value2 = FAULT_INJECT_ERROR_CODE(compat, v0_point, 16);
+
+	avm::fault_injection::deactivate(FAULT_INJECTION_POINT_REF(compat, v0_point));
+
+	BOOST_CHECK_EQUAL(value1, 0);
+	BOOST_CHECK_EQUAL(value2, 16);
+}
+
+BOOST_AUTO_TEST_CASE(error_condition_false)
+{
+	avm::fault_injection::InjectionStateGuard guard(FAULT_INJECTION_POINT_REF(compat, v0_point));
+	bool enabled = false;
+
+	const int value1 = FAULT_INJECT_ERROR_CODE_IF(compat, v0_point, enabled, 15);
+
+	BOOST_CHECK_EQUAL(value1, 15);
+}
+
+BOOST_AUTO_TEST_CASE(error_condition_true)
+{
+	avm::fault_injection::InjectionStateGuard guard(FAULT_INJECTION_POINT_REF(compat, v0_point));
+	bool enabled = true;
+
+	const int value1 = FAULT_INJECT_ERROR_CODE_IF(compat, v0_point, enabled, 15);
+
+	BOOST_CHECK_EQUAL(value1, 0);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

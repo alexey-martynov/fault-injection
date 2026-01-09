@@ -48,6 +48,10 @@ namespace avm::fault_injection
 		};
 	}
 
+	struct point_t;
+
+	using point_hook_t = void (*)(point_t &);
+
 	struct point_t
 	{
 		// This version is limited to range 1-255 to
@@ -61,7 +65,10 @@ namespace avm::fault_injection
 		mode_t mode;
 		union versions_t {
 			// Place future (greater than 1) version data here as structs
-		};
+			struct {
+				const point_hook_t stateChanged;
+			} v2;
+		} versions;
 	};
 
 	namespace detail
@@ -76,7 +83,7 @@ namespace avm::fault_injection
 	}
 
 
-#define FAULT_INJECT_POINT_VERSION       1
+#define FAULT_INJECT_POINT_VERSION       2
 #define FAULT_INJECT_MAX_POINT_VERSION 255
 
 #if (FAULT_INJECTIONS_ENABLED > 0) || (FAULT_INJECTIONS_DEFINITIONS > 0)
@@ -84,18 +91,28 @@ namespace avm::fault_injection
 #define DECLARE_FAULT_INJECTION_POINT(space, name) namespace space {	  \
 	extern ::avm::fault_injection::point_t fault_injection_point_##name; \
 	}
-#define FAULT_INJECTION_POINT_REF(space, name) ::space::fault_injection_point_##name
+#define FAULT_INJECTION_POINT_REF(space, name) (reinterpret_cast<::avm::fault_injection::point_t&>(::space::fault_injection_point_##name))
 
 #if defined(__APPLE__)
 #define FAULT_INJECTION_POINT_EX(space, name, description, error_code)	  \
 	namespace space { \
-		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { FAULT_INJECT_POINT_VERSION, #space, #name, description, error_code, false, ::avm::fault_injection::mode_t::multiple }; \
+		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { FAULT_INJECT_POINT_VERSION, #space, #name, description, error_code, false, ::avm::fault_injection::mode_t::multiple, { { nullptr } } }; \
+		static ::avm::fault_injection::point_t * fault_injection_point_##name##_ptr __attribute__((used,section("__DATA,__faults"))) = &FAULT_INJECTION_POINT_REF(space, name); \
+	}
+#define FAULT_INJECTION_POINT_HOOK(space, name, description, error_code, state_hook) \
+	namespace space { \
+		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { FAULT_INJECT_POINT_VERSION, #space, #name, description, error_code, false, ::avm::fault_injection::mode_t::multiple, { { state_hook } } }; \
 		static ::avm::fault_injection::point_t * fault_injection_point_##name##_ptr __attribute__((used,section("__DATA,__faults"))) = &FAULT_INJECTION_POINT_REF(space, name); \
 	}
 #elif defined(__linux__)
 #define FAULT_INJECTION_POINT_EX(space, name, description, error_code)	  \
 	namespace space { \
-		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { FAULT_INJECT_POINT_VERSION, #space, #name, description, error_code, false, ::avm::fault_injection::mode_t::multiple }; \
+		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { FAULT_INJECT_POINT_VERSION, #space, #name, description, error_code, false, ::avm::fault_injection::mode_t::multiple, { { nullptr } }  }; \
+		static ::avm::fault_injection::point_t * fault_injection_point_##name##_ptr __attribute__((used,section("__faults"))) = &FAULT_INJECTION_POINT_REF(space, name); \
+	}
+#define FAULT_INJECTION_POINT_HOOK(space, name, description, error_code, state_hook) \
+	namespace space { \
+		::avm::fault_injection::point_t fault_injection_point_##name __attribute__((used)) = { FAULT_INJECT_POINT_VERSION, #space, #name, description, error_code, false, ::avm::fault_injection::mode_t::multiple, { { state_hook } }  }; \
 		static ::avm::fault_injection::point_t * fault_injection_point_##name##_ptr __attribute__((used,section("__faults"))) = &FAULT_INJECTION_POINT_REF(space, name); \
 	}
 #else
@@ -171,6 +188,12 @@ namespace avm::fault_injection
 	}
 
 	__attribute__((visibility("hidden")))
+	inline point_hook_t getPointStateHook(const point_t & point)
+	{
+		return getPointVersion(point) > 1 ? point.versions.v2.stateChanged : nullptr;
+	}
+
+	__attribute__((visibility("hidden")))
 	inline const char * getSpace(const point_t & point)
 	{
 		return (getPointVersion(point) != 0u) ? point.space : reinterpret_cast<const v0::point_t &>(point).space;
@@ -196,6 +219,7 @@ namespace avm::fault_injection
 			return FAULT_INJECTION_READ_V0(reinterpret_cast<const v0::point_t &>(point).active);
 
 		case 1:
+		case 2:
 			return FAULT_INJECTION_READ(&point.active);
 
 		default:
@@ -229,8 +253,12 @@ namespace avm::fault_injection
 			break;
 
 		case 1:
+		case 2:
 			FAULT_INJECTION_WRITE(reinterpret_cast<std::underlying_type_t<mode_t> *>(&point.mode), static_cast<std::underlying_type_t<mode_t>>(mode));
 			FAULT_INJECTION_WRITE(&point.active, true);
+			if (point_hook_t hook = getPointStateHook(point)) {
+				hook(point);
+			}
 			break;
 		}
 	}
@@ -256,7 +284,11 @@ namespace avm::fault_injection
 			break;
 
 		case 1:
+		case 2:
 			FAULT_INJECTION_WRITE(&point.active, false);
+			if (point_hook_t hook = getPointStateHook(point)) {
+				hook(point);
+			}
 			break;
 		}
 	}
@@ -282,6 +314,7 @@ namespace avm::fault_injection
 			break;
 
 		case 1:
+		case 2:
 			FAULT_INJECTION_WRITE(&point.error_code, error);
 			break;
 		}
@@ -307,6 +340,7 @@ namespace avm::fault_injection
 			return FAULT_INJECTION_READ_V0(reinterpret_cast<const v0::point_t &>(point).error_code);
 
 		case 1:
+		case 2:
 			return FAULT_INJECTION_READ(&point.error_code);
 
 		default:
@@ -338,6 +372,7 @@ namespace avm::fault_injection
 			return FAULT_INJECTION_READ_V0(reinterpret_cast<const v0::point_t &>(point).mode);
 
 		case 1:
+		case 2:
 			return static_cast<mode_t>(FAULT_INJECTION_READ(reinterpret_cast<const std::underlying_type_t<mode_t> *>(&point.mode)));
 
 		default:
@@ -370,6 +405,7 @@ namespace avm::fault_injection
 			break;
 
 		case 1:
+		case 2:
 			FAULT_INJECTION_WRITE(reinterpret_cast<std::underlying_type_t<mode_t> *>(&point.mode), static_cast<std::underlying_type_t<mode_t>>(mode));
 			break;
 		}
